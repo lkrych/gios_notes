@@ -76,10 +76,30 @@ One problem is that stack growth can be dangerous, because if too much is writte
 
 Let's look at the kernel level structures now.
 
+<img src="p2_resources/kernel_level_data_structures.png">
+
 For each process we maintain information about that **process**.
 * what are the kernel level threads that execute in the address space.
 * What are the user credentials
 * What are the signal handlers that are valid for the process. 
 
-Next we have the **lightweight process data structure**.
-    * 
+Next we have the **lightweight process data structure**. This information is somewhat similar to what is maintained at the user-level, but this is what is visible to the kernel. 
+* user-level registers
+* system-call args
+* resource usage info
+* signal mask
+
+
+The **kernel-level data structure** includes. This information is not swappable, it always needs to exist. This is different from the LWP. 
+* kernel-level registers
+* stack pointers
+* scheduling class
+* pointers to associated LWP, process, and CPU structures.
+
+The **CPU data structure**
+* The current thread executing
+* list of kernel-level threads that ran there
+* information about dispatching and interrupt handling
+
+<img src="kernel_all_together.png">
+
