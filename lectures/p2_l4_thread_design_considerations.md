@@ -109,7 +109,7 @@ The **CPU data structure**
 
 <img src="p2_resources/kernel_all_together.png">
 
-## Basic Thread Management Interactions
+## Thread Management Interactions
 
 <img src="p2_resources/thread_management_intro.png">
 
