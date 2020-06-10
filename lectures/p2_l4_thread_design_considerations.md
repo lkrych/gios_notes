@@ -4,8 +4,9 @@ Threads can be implemented at the kernel-level, at the user-level or both. In th
 
 ## Table of Contents
 
-* []()
-* []()
+* [Thread Data Structures]()
+* [Thread Management Interactions]()
+* [Interrupts and Signals]()
 
 ## Kernel vs User Level Threads
 
@@ -147,3 +148,33 @@ The user-level library is part of the same address space as the process that is 
 3. ULT calls library functions like lock/unlock. 
 4. Blocked threads become runnable.
 
+### Issues on Multiple CPUs
+
+Imagine a scenario where there are three user-level threads. There is a priority between the threads, the higher the thread number, the higher the priority. 
+
+<img src="multiple_cpus.png">
+
+Imagine T2 and T1 are both running on different CPUs, and a resource that T3 needs becomes unlocked by T2. It is time to evict T1, but the signaling for this scheduling decision comes from the KLT that belongs to T2. How do we signal the other KLT to preempt it?
+
+### Synchronizaton-related issues
+
+Another interesting case when we have multiple CPU systems is related to synchronization.
+
+<img src="multi_cpu_sync.png">
+
+Consider the following situation: One ULT running on top of a KLT on one CPU, this thread has a mutex and a number of ULTs are blocked. 
+
+On another CPU, another ULT is scheduled. Let's say this ULT also needs that same mutex. The normal situation would be to put this ULT onto the mutex queue and have it wait for the mutex to be unlocked.
+
+However, on a multi-CPU system if the critical section is small, it actually might be more efficient to keep that other thread spinning on the CPU until the mutex is unlocked. This saves the OS from having to do the overhead of context switching and putting the ULT on the mutex queue. 
+
+This concept is known as **adaptive mutexes**. They only make sense on multi-cpu systems. 
+
+<img src="destroying_threads.png">
+
+Once a thread is no longer needed, it should be destroyed and its data should be freed. The allocation of threads takes some time and energy so sometimes, the data structures should be recycled. 
+
+
+<img src="max_threads.png">
+
+## Interrupts and Signals
