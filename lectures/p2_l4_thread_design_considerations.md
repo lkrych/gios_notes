@@ -2,6 +2,11 @@
 
 Threads can be implemented at the kernel-level, at the user-level or both. In this lecture, we will take a look at the data structures and mechanisms that are necessary to support threads.
 
+## Table of Contents
+
+* []()
+* []()
+
 ## Kernel vs User Level Threads
 
 <img src="p2_resources/kernelvuser.png">
@@ -103,3 +108,41 @@ The **CPU data structure**
 
 <img src="kernel_all_together.png">
 
+## Basic Thread Management Interactions
+
+<img src="thread_management_intro.png">
+
+The basic problem here is that the user-level thread does nto know what is happening in the kernel, and the kernel does not know what is happening in the user-level library!
+
+**System calls and special signals allow kernel and ULT library** to interact and coordinate. 
+
+<img src="pthread_set_concurrency.png">
+
+### Thread management visibility and design
+
+We just introduced a problem statement, the kernel and the user level library don't have insight into each other's activities. 
+
+At the kernel level, the kernel sees the kernel level threads, the CPUs and the kernel level scheduler. 
+
+At the user-level the library sees the user-level threads, and the available kernel level threads. Depending on the thread association model (one-to-one, one-to-many, many-to-many), the ULT will see how many threads are available.
+
+<img src="bound_thread.png">
+
+A ULT can bound a particular KLT to a particular ULT. 
+
+Let's illustrate the visibility problem. One user-level threads has a lock, and a KLT is supporting the execution of this critical section code. If this KLT is preempted, the execution of the critical section cannot continue. The ULT library will not be able to schedule any more threads because the halted ULT has the lock! Only after the KLT is rescheduled will the lock be released. 
+
+<img src="thread_boundary_invisibility.png">
+
+The essential problem here is that the kernel does not have any visibility into mutex variables or wait queues. 
+
+Let's dig deeper here. The best way to understand these problems is to actually understand how the ULT is implemented and executed. 
+
+<img src="ul_run.png">
+
+The user-level library is part of the same address space as the process that is running all of the threads. Occasionally the execution jumps to the appropriate program counter into the user level scheduling library. There are multiple reasons for this to happen!
+
+1. A User-level thread explicitly yields.
+2. A timer set by the library expires.
+3. ULT calls library functions like lock/unlock. 
+4. Blocked threads become runnable.
