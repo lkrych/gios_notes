@@ -4,9 +4,9 @@ Threads can be implemented at the kernel-level, at the user-level or both. In th
 
 ## Table of Contents
 
-* [Thread Data Structures]()
-* [Thread Management Interactions]()
-* [Interrupts and Signals]()
+* [Thread Data Structures](#thread-data-structures)
+* [Thread Management Interactions](#thread-management-interactions)
+* [Interrupts and Signals](#interrupts-and-signals)
 
 ## Kernel vs User Level Threads
 
@@ -16,7 +16,7 @@ Supporting threads at the kernel level means that the OS itself is multithreaded
 
 At the user-level, it means there is some library that supports all of these mechanisms 
 
-### Thread Data Structures - Single CPU
+### Thread Data Structures
 
 In a single-threaded process, the process is described in the PCB. 
 
@@ -235,7 +235,7 @@ A signal mask is maintained per execution context. If a signal mask suggests tha
 
 ### Interrupts on Multicore Systems
 
-<img src="p2_resources/multi_interrupt_cpu">
+<img src="p2_resources/multi_interrupt_cpu.png">
 
 We can designate only a single core in a multi-core system to handle certain interrupts. That means that we can avoid overheads related to interrupt handling, the net effect will be improved performance.
 
@@ -247,8 +247,8 @@ There are two types of signals
 
 ### Handling Interrupts as Threads
 
-<img src="p2_resources/handling_interrupts">
-<img src="p2_resources/handling_interrupts2">
+<img src="p2_resources/handling_interrupts.png">
+<img src="p2_resources/handling_interrupts2.png">
 
 One way to handle deadlock situations with threads is to dynamically generate a thread for an interrupt. That way the thread can be tucked into a waiting position by the scheduler and execute once the lock that it is blocked on is freed. The only problem with this is that it is expensive. 
 
@@ -308,4 +308,4 @@ To create a new task, Linux uses `clone()`. The flags parameter is a bit map tha
 
 `fork()` is internally implemented in linux using `clone()` with all of the flags cleared. 
 
-<img src="p2_resources/task_linux_model.png">
+<img src="p2_resources/tasks_linux_model.png">
