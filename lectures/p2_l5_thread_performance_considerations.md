@@ -76,6 +76,72 @@ On a single CPU, threads can be useful because they can hide latency. The main t
 
 If there isn't any idle time. Then it doesn't make sense to context switch. 
 
-The event driven model takes advantage of out-sourcing. It makes other things go and do the blocking work while it processes its fast non-blocking events. [source](https://www.kislayverma.com/post/event-based-asynchronous-programming)
-
 There are alternative models wherein multiple CPUs are each running a specific event-driven process. The only gotcha here is that we need a mechanism that will steer the right set of events to the appropriate CPU. That can be complicated. 
+
+
+An event is an input on a file descriptor (sockets or files). We can use the `select()` call to monitor file descriptors. Another alternative is to use `poll()`. The problem with these is that they have to actively scan file descriptors. 
+
+An alternative is the `epoll()`, which eliminates some of the problems of `select()` and `poll()`. 
+
+<img src="event_driven_benefits.png">
+
+### Challenges with the Event-Driven Model
+
+One big problem with the event-driven model is blocking requests. These can stop the entire model in its' tracks. 
+
+A solution to this problem is **asynchronous I/O operations**. Asynchronous properties have the property that when the thread or process makes the system call, the OS obtains all the relevant info from the caller and where and how it should be returned once it becomes available. 
+
+The event driven model takes advantage of **out-sourcing**. It makes other things go and do the blocking work while it processes its fast non-blocking events. [source](https://www.kislayverma.com/post/event-based-asynchronous-programming) 
+
+<img src="async_io.png">
+
+This is possible because the kernel itself is multi-threaded.  
+
+What happens when async calls are not available?
+ 
+To deal with this, Pai suggests helpers. Which are functions designated for blocking I/O operations only. The communication with the helper can be with sockets or other IPC mechanisms. Thus, `select()` and `poll()` can still be used. 
+
+The helper blocks, but the main event loop will not. In the Pai paper, these helpers were independent processes. 
+
+<img src="helpers.png">
+
+One big downside is that the event-driven model is not generally applicable to all problems. 
+
+## Flash Web Server
+
+<img src="flash_web_server.png">
+
+Flash is an event-driven web server that follows the AMPED model (asymmetric helper processes). 
+
+Helpers are used for disk reads (blocking I/O). Pipes are used for communication with the dispatcher. The helper reads the file in memory via the `mmap()` call.
+
+One optimization that is used by the flash web server is that the the dispatcher checks if pages of file are in memory (using `mincore()`). If they are in memory, it doesn't bother with the helper and just reads the file via a local handler, if they aren't it uses the helper to do the asynchronous work.  
+
+
+### Flash Optimizations
+
+<img src="flash_cache_optimization.png">
+
+Flash implements application-level caching at multiple levels. It does this on both data and computation. It is common to cache files, this is data caching. However, it is also possible to cache computations. The specific computation that the Flash server caches is the pathname of the file in the web server. It also does response header caches. 
+
+Another optimization is around the networking hardware. All of the data structures are aligned so that it is easy to do DMA operations without copying data. 
+
+
+### Apache Web Server
+
+<img src="apache.png">
+
+The core component accepts requests and responses and modules are used for handling specific duties.
+
+Like the event-driven model, each request passes through all of the modules. However, Apache is a combination of a multi-process and multi-threaded model.
+
+A single instance (process) of Apache is a multi-threaded boss-worker process that has dynamic management of the number of threads. This is configurable. The total number of processes can also be dynamically adjusted.
+
+### Comparing Flash and Apache
+
+<img src="server_comparison.png">
+
+The metrics used to compare the servers were bandwidth (bytes/time), and connection rate (request/time). 
+
+Both of these were evaluated as a function of file size. These are dueling metrics, the larger the file size, the higher the bandwidth, more data can be sent across a single connection. However, there is also more work per connection, which means that the connection rate will diminish.
+
