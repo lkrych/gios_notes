@@ -145,3 +145,10 @@ The metrics used to compare the servers were bandwidth (bytes/time), and connect
 
 Both of these were evaluated as a function of file size. These are dueling metrics, the larger the file size, the higher the bandwidth, more data can be sent across a single connection. However, there is also more work per connection, which means that the connection rate will diminish.
 
+<img src="server_comparison2.png">
+
+<img src="server_comparison3.png">
+
+<img src="server_comparison4.png">
+
+<img src="server_comparison_summary.png">
