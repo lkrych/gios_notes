@@ -1,10 +1,10 @@
 # Thread Performance Considerations
 
-<img src="which_model_is_better.png">
+<img src="p2_resources/which_model_is_better.png">
 
 If we consider execution time, the pipeline threading model is faster. However, if we care about average time to complete order, then the boss-worker model is better. 
 
-<img src="are_threads_useful">
+<img src="p2_resources/are_threads_useful">
 
 How did we draw these conclusions about threads? How do we determine what is a useful metric? For a matrix multiply application, execution time is probably the metric we want to focus on. For a web service application, it is probably the number of client requests per second. Or maybe response time might be a good metric.
 
@@ -12,7 +12,7 @@ To evaluate a solution, we need to determine the properties that matter, and fig
 
 ## Performance Metrics
 
-<img src="performance_metrics.png">
+<img src="p2_resources/performance_metrics.png">
 
 A metric is a measurable quantity that we can use to reason about the behavior of the system. Ideally we can run experiments with real software deployments and real workloads.
 
@@ -22,7 +22,7 @@ The answer depends on the metrics and workload that we are interested in. Contex
 
 ## How to best provide concurrency?
 
-<img src="multithread_vs_multiple_process.png>
+<img src="p2_resources/multithread_vs_multiple_process.png>
 
 Let's compare a **multi-threaded strategy vs a multiple processes** strategy in a web server. 
 
@@ -32,7 +32,7 @@ What are the steps in a web server?
 3. server processes a request.
 4. server responds by sending a file.
 
-<img src="web_server_steps.png
+<img src="p2_resources/web_server_steps.png
 
 ### Multi-process web server
 
@@ -40,19 +40,19 @@ Let's take a look at a multi-process web server.
 
 The benefits of this approach are that it is simple. The downsides are that there is high memory usage, context switching has a cost, and 
 
-<img src="multi_process_web.png">
+<img src="p2_resources/multi_process_web.png">
 
 An alternative is the multi-threaded application. All of these threads are executed within the same address space, and every one is executing a request.
 
 The benefits of this approach is that the threads share an address space. Context-switching between the threads is cheap. The memory requirements are lower. The downsides are that the implementation is not simple, it requires synchronization and underlying support for threads. 
 
-<img src="multi_thread_web.png">
+<img src="p2_resources/multi_thread_web.png">
 
 Another alternative is the **event-driven model**. 
 
 The application is implemented in a single address space, there is a single process and a single thread of control. 
 
-<img src="event_driven.png">
+<img src="p2_resources/event_driven.png">
 
 The main part of the process is the **event dispatcher** that continuously looks for incoming events and then based on those events, invokes a registered handler. Some events might be: receipt of request, completion of send, completion of a disk read.
 
@@ -68,7 +68,7 @@ In the multi-process and multi-threaded models, there is 1 request per execution
 
 In the event-driven model, many requests are interleaved within the same execution context. The single thread switches among processing of different requests. 
 
-<img src="event_driven_concurrency.png">
+<img src="p2_resources/event_driven_concurrency.png">
 
 What is the benefit of the event-driven model?
 
@@ -83,7 +83,7 @@ An event is an input on a file descriptor (sockets or files). We can use the `se
 
 An alternative is the `epoll()`, which eliminates some of the problems of `select()` and `poll()`. 
 
-<img src="event_driven_benefits.png">
+<img src="p2_resources/event_driven_benefits.png">
 
 ### Challenges with the Event-Driven Model
 
@@ -93,7 +93,7 @@ A solution to this problem is **asynchronous I/O operations**. Asynchronous prop
 
 The event driven model takes advantage of **out-sourcing**. It makes other things go and do the blocking work while it processes its fast non-blocking events. [source](https://www.kislayverma.com/post/event-based-asynchronous-programming) 
 
-<img src="async_io.png">
+<img src="p2_resources/async_io.png">
 
 This is possible because the kernel itself is multi-threaded.  
 
@@ -103,13 +103,13 @@ To deal with this, Pai suggests helpers. Which are functions designated for bloc
 
 The helper blocks, but the main event loop will not. In the Pai paper, these helpers were independent processes. 
 
-<img src="helpers.png">
+<img src="p2_resources/helpers.png">
 
 One big downside is that the event-driven model is not generally applicable to all problems. 
 
 ## Flash Web Server
 
-<img src="flash_web_server.png">
+<img src="p2_resources/flash_web_server.png">
 
 Flash is an event-driven web server that follows the AMPED model (asymmetric helper processes). 
 
@@ -120,7 +120,7 @@ One optimization that is used by the flash web server is that the the dispatcher
 
 ### Flash Optimizations
 
-<img src="flash_cache_optimization.png">
+<img src="p2_resources/flash_cache_optimization.png">
 
 Flash implements application-level caching at multiple levels. It does this on both data and computation. It is common to cache files, this is data caching. However, it is also possible to cache computations. The specific computation that the Flash server caches is the pathname of the file in the web server. It also does response header caches. 
 
@@ -129,7 +129,7 @@ Another optimization is around the networking hardware. All of the data structur
 
 ### Apache Web Server
 
-<img src="apache.png">
+<img src="p2_resources/apache.png">
 
 The core component accepts requests and responses and modules are used for handling specific duties.
 
@@ -139,16 +139,16 @@ A single instance (process) of Apache is a multi-threaded boss-worker process th
 
 ### Comparing Flash and Apache
 
-<img src="server_comparison.png">
+<img src="p2_resources/server_comparison.png">
 
 The metrics used to compare the servers were bandwidth (bytes/time), and connection rate (request/time). 
 
 Both of these were evaluated as a function of file size. These are dueling metrics, the larger the file size, the higher the bandwidth, more data can be sent across a single connection. However, there is also more work per connection, which means that the connection rate will diminish.
 
-<img src="server_comparison2.png">
+<img src="p2_resources/server_comparison2.png">
 
-<img src="server_comparison3.png">
+<img src="p2_resources/server_comparison3.png">
 
-<img src="server_comparison4.png">
+<img src="p2_resources/server_comparison4.png">
 
-<img src="server_comparison_summary.png">
+<img src="p2_resources/server_comparison_summary.png">
