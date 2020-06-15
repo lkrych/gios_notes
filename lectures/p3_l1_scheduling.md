@@ -25,3 +25,6 @@ Whenever the CPU becomes idle, we need to run the scheduler. The goal is to pick
 Which task should be selected? The answer **depends on the scheduling policy/algorithm**.
 
 How is the scheduling policy accomplished? The details depend on the **runqueue data structure**.  The design of the scheduling algorithm is coupled with the design of the runqueue. 
+
+### Run-to-Completion Scheduling
+
