@@ -28,3 +28,28 @@ How is the scheduling policy accomplished? The details depend on the **runqueue 
 
 ### Run-to-Completion Scheduling
 
+
+Run-to-completion scheduling is when as soon as a task is assigned to a CPU, it runs until it completes. 
+
+Because we will be comparing scheduling algorithms, we need some metrics to compare them. 
+
+* throughput
+* average job completion time
+* average job wait time
+* cpu utilization
+
+<img src="fcfs_metrics.png">
+
+The first algorithm we will talk about is **First-Come First-Server (FCFS)**. In this algorithm tasks are scheduled in the order that they arrive. 
+
+Clearly a good way to organize the runqueue, would be a queue, so that tasks can be picked up in a FIFO manner. 
+
+To make a decision, all the algorithm will need to do is pop from the queue. 
+
+This design is simple, but the wait time is really long if a long running job is scheduled in the middle of the queue.
+
+<img src="sjf_design.png">
+
+A variation on this algorithm is **Shortest Job First (SJF)**, which schedules tasks in order of their execution time. 
+
+We will organize the data structure as a queue, but we will need to iterate through it to find the shortest run-time each time to find the next job O(n). **One thing we can do is maintain the queue as an ordered queue**. This makes the insertion more complex, but the selection of a task easier.  Or we can use a tree.
