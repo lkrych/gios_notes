@@ -6,7 +6,7 @@ We will also look at Linux schedulers and scheduling on multi-CPU platforms.
 
 ## A Visual Metaphor
 
-<img src="visual_metaphor.png">
+<img src="p3_resources/visual_metaphor.png">
 
 Running with our toy shop metaphor, an OS scheduler is like a toy shop manager responding to work loads. 
 
@@ -53,3 +53,32 @@ This design is simple, but the wait time is really long if a long running job is
 A variation on this algorithm is **Shortest Job First (SJF)**, which schedules tasks in order of their execution time. 
 
 We will organize the data structure as a queue, but we will need to iterate through it to find the shortest run-time each time to find the next job O(n). **One thing we can do is maintain the queue as an ordered queue**. This makes the insertion more complex, but the selection of a task easier.  Or we can use a tree.
+
+<img src="sjf_metrics.png">
+
+### Preemptive Scheduling: SJF + Preempt
+
+So far we've assumed that a task on our CPU cannot be preempted. Let's relax that requirement. 
+
+Let's look at some tasks that don't all arrive at the same time. Using SJF, when shorter tasks arrive, the running process is preempted and the shorter jobs are scheduled. 
+
+<img src="preemptive_scheduling.png">
+
+One of the details we've glossed over in these simple examples is that **the scheduler will not actually know the execution time of a task**. 
+
+The Scheduler uses heuristics to guess what the execution time will be. Usually the scheduler uses an average of the past execution times to estimate how long it will take. The variability of these execution times has to do with what's in cache, how the network is working, etc. 
+
+
+### Preemptive Scheduling: Priority
+
+<img src="priority_preemptive.png">
+
+Another criteria that could drive preemption is **priority**. This is a pretty common scenario, OS kernel level threads typically have higher priority than user-level threads.
+
+The scheduler needs to know how to run the highest priority task next. 
+
+This algorithm can be achieved using multiple runqueue structures, a different one for each priority level. The scheduler will then select a ready task from the highest priority queue possible. 
+
+One danger with priority scheduling is **starvation**, where a low priority task never gets run because higher priority tasks keep getting scheduled.
+
+A mechanism to prevent starvation is **priority aging**, the priority is a function of the task and the time spent on the queue, so the longer it is on the queue, the higher priority it becomes. 
