@@ -82,3 +82,64 @@ This algorithm can be achieved using multiple runqueue structures, a different o
 One danger with priority scheduling is **starvation**, where a low priority task never gets run because higher priority tasks keep getting scheduled.
 
 A mechanism to prevent starvation is **priority aging**, the priority is a function of the task and the time spent on the queue, so the longer it is on the queue, the higher priority it becomes. 
+
+<img src="preemption_quiz.png">
+
+### Priority Inversion
+
+<img src="prioritiy_inversion.png">
+
+**Priority inversion** is the phenomenon where high priority threads end up running last because they need to acquire locks held by preempted lower priority threads. 
+
+One solution to this problem is to **temporarily boost the priority of the mutex owner** during execution. In the example above, this would mean boosting T3 to P1 priority and have it execute quickly so that it can unlock the mutex. 
+
+### Round Robin Scheduling
+
+<img src="rr_io.png">
+
+A popular scheduling algorithm is round robin scheduling. In round robin, the first task from queue is picked up (like FCFS). The task may be preempted (unlike FCFS).
+
+<img src="rr_noio.png">
+
+Round Robin can also include priorities. When a higher task arrives, the lower priority task is preempted. Otherwise the task is served liked FCFS. 
+
+Another modification is round robin with interleaving. In this strategy, the scheduler uses timers and timeslices to cycle between the different tasks.
+
+<img src="rr_interleaving.png">
+
+### Time Sharing and Timeslices
+
+A **timeslice** is the maximum amount of uninterrupted time given to a task. It is also referred to as a quantum.
+
+A timeslice is a maximum amount of time, so a task may run with a shorter duration for instance if it needs to do I/O or is blocked on synchronization. In this case, it will be placed on a queue. 
+
+Using timeslices allow tasks to timeshare the CPU. CPU-bound tasks are preempted after timeslice. 
+
+<img src="time_slicing_metrics.png">
+
+You can see that time slicing allows us to achieve fairly good metrics without having to use a shortest job first algorithm. The benefit of this method is that shorter tasks finish sooner, it is more responsive, and lengthy I/O operations are initiated sooner. 
+
+The downside of this strategy is all of the interruptions, this creates overhead from the context switching. 
+
+The timeslice should always be bigger than the time to context switch to minimize these overheads. 
+
+To answer **how long a timeslice should be depends on whether we are mainly servicing I/O-bound operations or CPU-bound operations**. 
+
+### CPU Bound Timeslice length
+
+<img src="cpu_bound.png">
+
+For **CPU bound tasks, larger time slices are better**. We don't really care about their responsiveness, the user really cares about when they complete and overall when all the tasks finish. 
+
+### IO Bound Timeslice length
+
+<img src="io_bound.png">
+
+For IO bound tasks, in the scenario above, the two tasks are equivalent because of IO blocking. 
+
+<img src="io_bound2.png">
+
+For a scenario with only one IO-bound task, we can see that a **smaller timeslice results in better performance**. It allows us to keep the CPU and the I/O devices busy.
+
+
+<img src="timeslice_summary.png">
