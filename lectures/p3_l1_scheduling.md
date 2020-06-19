@@ -180,3 +180,17 @@ This scheduler gets its name from the fact that it can **add/select a task in co
 User processes have priorities in the timesharing class, with the default priority in the middle at 120. **Priority levels can be adjusted with "nice values"** which span from -20 to 19. There is a system call to adjust the priority of a user process.
 
 The 0(1) scheduler **borrows from the MLFQ scheduler in that each priority level is associated with a different timeslice value**. It also us**es feedback to understand how to prioritize** tasks in the future. 
+
+The scheduler assigns the smallest timeslice values to the low-priority CPU bound tasks, and the largest timeslice values to the more interactive tasks. (non-intuitive, read onwards my friend)
+
+The feedback for the task depends on how long the task spent sleeping (time spent waiting) during its timeslice. If a task spends more time sleeping, this means it is more interactive and its priority is boosted (subtract 5). If a task spends less time sleeping, this means it is more computationally intensive and its priority is lowered (add 5).
+
+The **runqueue in the 0(1) scheduler is implemented as two arrays of tasks**. Each array elements points to the first runnable task at that priority level. 
+
+The two arrays are **active** and **expired**. 
+
+The **active list is the primary one the scheduler uses to select the next task to run**. It takes constant time to add a task, as it takes constant time to index into the array and then follow the pointer to the end of the task list to enqueue the task. It takes constant time to select a task because the scheduler relies on certain instructions that return the first set bit in a sequence of bits. If the sequence corresponds to the priority levels and a set bit means there are tasks at that level, then it will take a constant amount of time to run those instructions to detect what is the priority level that has certain tasks on it. Once that position is known, it takes a constant amount of time to index into the array and select the first task. (yeesh)
+
+If a task yields to the CPU to wait on an event or is preempted due to a higher priority task becoming runnable, the time it has spent on the CPU is compared to the timeslice. If it is less than the timeslice, the task is placed back on the active queue for that priority level. 
+
+Only after the entire timeslice has been exhausted will the task move to the expired array.
