@@ -67,18 +67,18 @@ Let's look at some tasks that don't all arrive at the same time. Using SJF, when
 
 One of the details we've glossed over in these simple examples is that **the scheduler will not actually know the execution time of a task**. 
 
-The Scheduler uses heuristics to guess what the execution time will be. Usually the scheduler uses an average of the past execution times to estimate how long it will take. The variability of these execution times has to do with what's in cache, how the network is working, etc. 
+The Scheduler uses heuristics to guess what the execution time will be. Usually the scheduler uses an average of the past execution (windowed average) times to estimate how long it will take. The variability of these execution times has to do with what's in cache, how the network is working, etc. 
 
 
 ### Preemptive Scheduling: Priority
 
 <img src="priority_preemptive.png">
 
-Another criteria that could drive preemption is **priority**. This is a pretty common scenario, OS kernel level threads typically have higher priority than user-level threads.
+Another criteria that could drive preemption is **priority**. This is a pretty common scenario, OS kernel level tasks that manage critical system components typically have higher priority than user-level threads.
 
 The scheduler needs to know how to run the highest priority task next. 
 
-This algorithm can be achieved using multiple runqueue structures, a different one for each priority level. The scheduler will then select a ready task from the highest priority queue possible. 
+**This algorithm can be achieved using multiple runqueue structures, a different one for each priority level**. The scheduler will then select a ready task from the highest priority queue possible. 
 
 One danger with priority scheduling is **starvation**, where a low priority task never gets run because higher priority tasks keep getting scheduled.
 
