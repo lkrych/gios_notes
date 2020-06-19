@@ -217,8 +217,49 @@ This runqueue has the property that for a given node, all nodes to the left have
 
 The **CFS algorithm always schedules the node with the least amount of vruntime in the system**, which is typically the leftmost node of the tree. Periodially, CFS will increment the vruntime of the task that is currently executing on the CPU, at which point it will compare the currently running task with the leftmost node. If the currently running task has a larger vruntime, it will preempt the running task in favor of the leftmost node.
 
-For lower priority tasks the vruntime will be updated more frequently, that is the scheduler will often check if it is time to preempt a lower priority task. We can think of time moving more quickly for lower priority tasks. For higher priority tasks the vruntime will be updated less frequently, that is t**he scheduler will rarely check if it is time to preempt a higher priority task**. 
+For lower priority tasks the vruntime will be updated more frequently, that is the scheduler will often check if it is time to preempt a lower priority task. We can think of time moving more quickly for lower priority tasks. For higher priority tasks the vruntime will be updated less frequently, that is **the scheduler will rarely check if it is time to preempt a higher priority task**. 
 
 In summary, task selection from the runqueue takes constant time. Adding a task to the runqueue takes log time relative to the total number of tasks in the system.
 
 ## Scheduling on Multiprocessors
+
+In a **shared memory multiprocessor**, there are multiple CPUs. Each CPU has its own private L1/L2 cache, as well as a last-level cache (LLC) which may or may not be shared amongst the CPUs. Finally, there is system memory (DRAM) which is shared across the CPUs. 
+
+In a **multicore system**, each CPU can have multiple internal cores. Each core has its own private L1/L2 cache, and the CPU as a whole shares an LLC. DRAM is present in this system as well. 
+
+<img src="multi_cpu_architecture.png">
+
+As far as the OS is concerned, it sees all of the CPUs and all of the cores in the CPUs as entities onto which it can schedule tasks. 
+
+Since the performance of processes/threads is highly dependent on the amount of execution state tha tis present in the CPU cache, as opposed to main memory, it makes sense that we would **want to schedule tasks on to CPUs such that we can maximize how "hot" we can keep our CPU caches**. To achieve this, we want to **schedule our tasks back on the same CPU they had been executing on** in the past. This is known as **cache affinity**. 
+
+To achieve cache affinity, we can have a hierarchical scheduling **architecture which maintains a load balancing component that is responsible for dividing the tasks among CPUs**. Each CPU then has its own scheduler with its own runqueue, and is responsible for scheduling tasks on that CPU exclusively.
+
+To load balance across the CPUs, we can look at the length of each of the runqueues to ensure one is not too much longer than the other. In addition, we can detect when a CPU is idle, and rebalance some of the work from the other queues on to the queue associated with the idle CPU. 
+
+In addition to having multiple processors, it is **possible to have multiple memory nodes**. The CPUs and the memory nodes will be connected via some physical interconnect. In most configurations it is common that a memory node will be closer to a socket of multiple processors, which means that access to this memory node from those processors is faster than accessing some remote memory node. We call these platforms **non-uniform memory access (NUMA) platforms**. 
+
+From a scheduling perspective, what makes sense is to keep tasks on the CPU closest to the memory node where the state is, in order to maximize the speed of memory access. We refer to this as NUMA-aware scheduling.
+
+<img src="numa_scheduling.png">
+
+## Hyperthreading
+
+The reason we have to context switch among threads is because the CPU only has one set of registers to describe an execution context. Over time, hardware architects have realized they can hide some of the latency associated with context switching. One strategy is to have **CPUs with multiple sets of registers where each set of registers can describe the context of a separate thread**. 
+
+<img src="hyperthreading.png">
+
+This is called **hyperthreading**. In hyperthreading, we have multiple hardware-supported execution context. We still have one CPU - so only one of these threads will execute at a given time - but context switching amongst the threads is very fast.
+
+This mechanism is referred to by many names: hardware multithreading, hyperthreading, chip multithreading (CMT), simultaneous multithreading (SMT). Don't be bamboozled.
+
+Modern platforms often support two hardware threads, though some high performance platforms may support up to eight. Modern systems allow for hyperthreading to be enabled/disabled at boot time, as there are tradeoffs to this approach.
+
+If hyperthreading is enabled, each of these hardware contexts appears to the scheduler as an entity upon which it can schedule tasks. If the amount of time a thread is idling is greater than the amount of time to context switch twice, it makes sense to context switch. Since a hardware context switch is on the order of cycles and DRAM access is on the order of hundreds of cycles, hyperthreading can be used to hide memory access latency.
+
+
+### Scheduling for hyperthreading platforms
+
+To understand what is required from a scheduler in a hyperthreaded platform, we must first make some assumptions.
+
+First we need
