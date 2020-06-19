@@ -16,7 +16,7 @@ The **CPU scheduler decides how and when processes access shared CPUs**. In this
 
 The scheduler concerns itself with **both user-level tasks and kernel-level tasks**.
 
-<img src="scheduling_overview">
+<img src="p3_resources/scheduling_overview">
 
 The responsibility of the scheduler is to **pick a task from the ready queue and dispatch it to the CPU**. 
 
@@ -39,7 +39,7 @@ Because we will be comparing scheduling algorithms, we need some metrics to comp
 * average job wait time
 * cpu utilization
 
-<img src="fcfs_metrics.png">
+<img src="p3_resources/fcfs_metrics.png">
 
 The first algorithm we will talk about is **First-Come First-Server (FCFS)**. In this algorithm tasks are scheduled in the **order that they arrive**. 
 
@@ -49,13 +49,13 @@ To make a decision, all the algorithm will need to do is pop from the queue.
 
 This design is simple, but the wait time is really long if a long running job is scheduled in the middle of the queue.
 
-<img src="sjf_design.png">
+<img src="p3_resources/sjf_design.png">
 
 A variation on this algorithm is **Shortest Job First (SJF)**, which schedules tasks in order of their execution time. 
 
 We could organize the data structure as a queue, but we will need to iterate through it to find the shortest run-time each time to find the next job O(n). **One thing we can do is maintain the queue as an ordered queue**. This makes the insertion more complex, but the selection of a task easier.  Or we can use a tree.
 
-<img src="sjf_metrics.png">
+<img src="p3_resources/sjf_metrics.png">
 
 ### Preemptive Scheduling: SJF + Preempt
 
@@ -63,7 +63,7 @@ So far we've assumed that a task on our CPU cannot be preempted. Let's relax tha
 
 Let's look at some tasks that don't all arrive at the same time. Using SJF, when shorter tasks arrive, the running process is preempted and the shorter jobs are scheduled. 
 
-<img src="preemptive_scheduling.png">
+<img src="p3_resources/preemptive_scheduling.png">
 
 One of the details we've glossed over in these simple examples is that **the scheduler will not actually know the execution time of a task**. 
 
@@ -72,7 +72,7 @@ The Scheduler uses heuristics to guess what the execution time will be. Usually 
 
 ### Preemptive Scheduling: Priority
 
-<img src="priority_preemptive.png">
+<img src="p3_resources/priority_preemptive.png">
 
 Another criteria that could drive preemption is **priority**. This is a pretty common scenario, OS kernel level tasks that manage critical system components typically have higher priority than user-level threads.
 
@@ -84,11 +84,11 @@ One danger with priority scheduling is **starvation**, where a low priority task
 
 A mechanism to prevent starvation is **priority aging**, the priority is a function of the task and the time spent on the queue, so the longer it is on the queue, the higher priority it becomes. 
 
-<img src="preemption_quiz.png">
+<img src="p3_resources/preemption_quiz.png">
 
 ### Priority Inversion
 
-<img src="prioritiy_inversion.png">
+<img src="p3_resources/prioritiy_inversion.png">
 
 **Priority inversion** is the phenomenon where high priority threads end up running last because they need to acquire locks held by preempted lower priority threads. 
 
@@ -96,17 +96,17 @@ One solution to this problem is to **temporarily boost the priority of the mutex
 
 ### Round Robin Scheduling
 
-<img src="rr_io.png">
+<img src="p3_resources/rr_io.png">
 
 A popular scheduling algorithm is **round robin scheduling**. In round robin, the first task from queue is picked up (like FCFS). The task may be preempted (unlike FCFS).
 
-<img src="rr_noio.png">
+<img src="p3_resources/rr_noio.png">
 
 Round Robin can also include priorities. When a higher task arrives, the lower priority task is preempted. Otherwise the task is served liked FCFS. 
 
 Another modification is **round robin with interleaving**. In this strategy, the scheduler uses timers and timeslices to cycle between the different tasks.
 
-<img src="rr_interleaving.png">
+<img src="p3_resources/rr_interleaving.png">
 
 ### Time Sharing and Timeslices
 
@@ -114,7 +114,7 @@ A **timeslice** is the maximum amount of uninterrupted time given to a task. It 
 
 **Using timeslices allow tasks to timeshare the CPU**. CPU-bound tasks are preempted after timeslice. For I/O bound tasks, this is not super critical, as these tasks will often be placed on wait queues. However, for CPU bound tasks, timeslices are the only way the we can achieve timesharing.
 
-<img src="time_slicing_metrics.png">
+<img src="p3_resources/time_slicing_metrics.png">
 
 You can see that time slicing allows us to achieve fairly good metrics without having to use a shortest job first algorithm (which has to know execution times). **The benefit of this method is that shorter tasks finish sooner, it is more responsive, and lengthy I/O operations are initiated sooner.**
 
@@ -126,7 +126,7 @@ To answer **how long a timeslice should be depends on whether we are mainly serv
 
 ### CPU Bound Timeslice length
 
-<img src="cpu_bound.png">
+<img src="p3_resources/cpu_bound.png">
 
 With a smaller timeslice value, we have to pay the time cost of context switching more frequently. This will degrade our throughput and our average completion time. That being said, smaller timeslices mean that tasks are started sooner, so our average wait time is better when we have smaller timeslices.
 
@@ -134,16 +134,16 @@ For **CPU bound tasks, larger time slices are better**. We don't really care abo
 
 ### IO Bound Timeslice length
 
-<img src="io_bound.png">
+<img src="p3_resources/io_bound.png">
 
 For IO bound tasks, in the scenario above, the two tasks are equivalent because of IO blocking. 
 
-<img src="io_bound2.png">
+<img src="p3_resources/io_bound2.png">
 
 For a scenario with only one IO-bound task, we can see that a **smaller timeslice results in better performance**. It allows us to keep the CPU and the I/O devices busy.
 
-<img src="timeslice_summary.png">
-<img src="timeslice_utilization.png">
+<img src="p3_resources/timeslice_summary.png">
+<img src="p3_resources/timeslice_utilization.png">
 
 ### Runqueue Data Structure
 
@@ -153,7 +153,7 @@ For example, if we want I/O and CPU bound tasks to have different timeslice valu
 
 One common data structure is a multi-queue structure that maintains multiple distinct queues, each differentiated by their timeslice value. I/O intensive tasks will be associated with the queue with the smallest timeslice values, while CPU intensive tasks will be associated with the largest timeslice values. 
 
-<img src="multi_queue.png">
+<img src="p3_resources/multi_queue.png">
 
 This is a good solution because it provides timeslicing benefits for I/O tasks and avoids overhead of timeslicing in CPU bound tasks. 
 
@@ -167,7 +167,7 @@ When a new task enters the system, it is placed in the queue with the smallest t
 
 If a task in a lower queue frequently releases the CPU due to I/O waits, the scheduler can boost the priority of the task and place it in a queue with a a smaller timeslice. 
 
-<img src="feedback_queue.png">
+<img src="p3_resources/feedback_queue.png">
 
 This responsive data structure is called a **multi-level feedback queue**. 
 
@@ -207,7 +207,7 @@ In addition, the scheduler doesn't make any **fairness** guarantees, which is th
 
 CFS is now the default scheduler for non-realtime tasks in Linux.
 
-<img src="linux_cfs.png">
+<img src="p3_resources/linux_cfs.png">
 
 **CFS uses a red-black tree as the runqueue structure**. Red-black trees are **self-balancing trees**, which **ensure that all of the paths from the root of the tree to the leaves are approximately the same size**. 
 
@@ -227,7 +227,7 @@ In a **shared memory multiprocessor**, there are multiple CPUs. Each CPU has its
 
 In a **multicore system**, each CPU can have multiple internal cores. Each core has its own private L1/L2 cache, and the CPU as a whole shares an LLC. DRAM is present in this system as well. 
 
-<img src="multi_cpu_architecture.png">
+<img src="p3_resources/multi_cpu_architecture.png">
 
 As far as the OS is concerned, it sees all of the CPUs and all of the cores in the CPUs as entities onto which it can schedule tasks. 
 
@@ -241,13 +241,13 @@ In addition to having multiple processors, it is **possible to have multiple mem
 
 From a scheduling perspective, what makes sense is to keep tasks on the CPU closest to the memory node where the state is, in order to maximize the speed of memory access. We refer to this as NUMA-aware scheduling.
 
-<img src="numa_scheduling.png">
+<img src="p3_resources/numa_scheduling.png">
 
 ## Hyperthreading
 
 The reason we have to context switch among threads is because the CPU only has one set of registers to describe an execution context. Over time, hardware architects have realized they can hide some of the latency associated with context switching. One strategy is to have **CPUs with multiple sets of registers where each set of registers can describe the context of a separate thread**. 
 
-<img src="hyperthreading.png">
+<img src="p3_resources/hyperthreading.png">
 
 This is called **hyperthreading**. In hyperthreading, we have multiple hardware-supported execution context. We still have one CPU - so only one of these threads will execute at a given time - but context switching amongst the threads is very fast.
 
@@ -262,7 +262,7 @@ If hyperthreading is enabled, each of these hardware contexts appears to the sch
 
 To understand what is required from a scheduler in a hyperthreaded platform, we must first make some assumptions.
 
-<img src="hyperthreading_assumptions.png">
+<img src="p3_resources/hyperthreading_assumptions.png">
 
 First, we need to assume that a thread can issue an instruction on every CPU cycle. This means that a CPU bound thread will be able to maximize the instructions per cycle. 
 
@@ -274,7 +274,7 @@ Finally, we will assume that we have an SMT platform with two hardware threads.
 
 Let's look at a scenario of co-scheduling two compute-bound threads.
 
-<img src="hyper_computebound.png">
+<img src="p3_resources/hyper_computebound.png">
 
 Even though each thread is able to issue a CPU instruction during each cycle, only one thread will be able to issue an instruction a atime since there is only one CPU pipeline. As a result, **these threads will interfere with one another as they compete for CPU pipelines resources**. 
 
@@ -282,13 +282,13 @@ The best case scenario is that a thread idles every other cycle while it yields 
 
 Let's look at co-scheduling memory-bound threads.
 
-<img src="hyperthreading_membound.png">
+<img src="p3_resources/hyperthreading_membound.png">
 
 Similar to the CPU-bound example, we still have idle time where both reads are waiting on memory access to return, which means wasted CPU cycles. 
 
 Finally, let's considered co-scheduling a mixture.
 
-<img src="hyperthreading_mix.png">
+<img src="p3_resources/hyperthreading_mix.png">
 
 This solution seems best. We can schedule the CPU-bound thread until the memory-bound thread needs to issue a memory request. We context switch over, issue the request, and then context switch back and continue our compute-heavy task.
 
@@ -298,3 +298,32 @@ Scheduling a mix of memory/CPU-intensive threads allows us to avoid or at least 
 
 How do we know if a thread is CPU-bound or memory-bound? We need to use historic information.
 
+When we looked previously at determining whether a process was more interactive or more CPU intensive, we looked at the amount of time the process spent sleeping. This approach won't work for two reasons. First, the thread is nto really sleeping when it is waiting for memory access, it is waiting on the processor pipeline, not somewhere in the software queue. Second, to keep track of the sleep time we were using software methods, and that is too slow at this level. The context switch takes on the order of cycles, so we need to be able to make our decision very quickly.
+
+We need hardware-level information.
+
+Most modern platforms contain **hardware counters** that get updated as the processor executes and keeps information about various aspects of execution like: L1, L2 cache misses, Instructions per cycle (IPC), and power/energy usage data. 
+
+There are a number of **software interfaces** to these counters such as **oprofile, or Linux perf tool**. 
+
+Many practical scheduling techniques rely on the use of hardware counters to understand something about the resource needs of a thread. The scheduler can use this information to pick a good mix of threads that are available in the runqueue to schedule in the system.
+
+For example, a thread scheduler can look at the number of LLC misses and determine if this number is great enough, then the thread is likely memory-bound.
+
+## Scheduling with Hardware Counters (Fedorova)
+
+Fedorova speculates that a more concrete metric to help determine if a thread is CPU-bound or memory-bound is **cycles-per-instruction (CPI)**. A memory-bound thread will take a lot of cycles to complete an instruction, therefore it has high CPI. A CPU-bound thread will have a CPI or 1 or some low number, as it can complete an instruction every cycle.
+
+<img src="p3_resources/fedorova.png">
+
+Fedorova uses a simulation with 4 cores, with each core having a 4-way SMT. She creates a synthetic workload where her threads have a CPI of 1, 6, 11, and 16. She runs four experiments with each core having a specific composition of threads. 
+
+<img src="p3_resources/fedorova2.png">
+
+In the first two experiments, we have a fairly well balanced mix of high and low CPI threads across the cores. We see that in these two cases, the processor pipeline was well-utilized and that our IPC is high.
+
+In the last two experiments, each of the cores were assigned tasks with similar or identical CPI values. We can see that in these two cases, the processor pipeline was much more poorly utilized. Threads either spent a lot of time in contention with one another - in the case of CPU-bound tasks - or spend a lot of time idling in the case of memory-bound tasks. Regardless the IPC dropped.
+
+We can conclude that scheduling tasks with mixed CPI values leads to higher performance utilization.
+
+<img src="p3_resources/fedorova3.png">
