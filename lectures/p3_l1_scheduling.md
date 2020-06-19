@@ -262,4 +262,39 @@ If hyperthreading is enabled, each of these hardware contexts appears to the sch
 
 To understand what is required from a scheduler in a hyperthreaded platform, we must first make some assumptions.
 
-First we need
+<img src="hyperthreading_assumptions.png">
+
+First, we need to assume that a thread can issue an instruction on every CPU cycle. This means that a CPU bound thread will be able to maximize the instructions per cycle. 
+
+Second, we need to assume that memory access takes four cycles. What this means is that a memory bound thread will experience some idle cycles while it is waiting for memory access to complete.
+
+Third, we can assume that hardware switching is instantaneous. 
+
+Finally, we will assume that we have an SMT platform with two hardware threads.
+
+Let's look at a scenario of co-scheduling two compute-bound threads.
+
+<img src="hyper_computebound.png">
+
+Even though each thread is able to issue a CPU instruction during each cycle, only one thread will be able to issue an instruction a atime since there is only one CPU pipeline. As a result, **these threads will interfere with one another as they compete for CPU pipelines resources**. 
+
+The best case scenario is that a thread idles every other cycle while it yields to the other thread. This degrades the thread performance by a factor of two. In additionm the memory component is completely idle during this computation and nothing is performing any memory access.
+
+Let's look at co-scheduling memory-bound threads.
+
+<img src="hyperthreading_membound.png">
+
+Similar to the CPU-bound example, we still have idle time where both reads are waiting on memory access to return, which means wasted CPU cycles. 
+
+Finally, let's considered co-scheduling a mixture.
+
+<img src="hyperthreading_mix.png">
+
+This solution seems best. We can schedule the CPU-bound thread until the memory-bound thread needs to issue a memory request. We context switch over, issue the request, and then context switch back and continue our compute-heavy task.
+
+Scheduling a mix of memory/CPU-intensive threads allows us to avoid or at least limit the contention on the processor pipeline and ensure utilization across both the CPU and the memory components.
+
+## CPU-Bound or Memory-Bound?
+
+How do we know if a thread is CPU-bound or memory-bound? We need to use historic information.
+
