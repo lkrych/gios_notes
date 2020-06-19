@@ -98,29 +98,27 @@ One solution to this problem is to **temporarily boost the priority of the mutex
 
 <img src="rr_io.png">
 
-A popular scheduling algorithm is round robin scheduling. In round robin, the first task from queue is picked up (like FCFS). The task may be preempted (unlike FCFS).
+A popular scheduling algorithm is **round robin scheduling**. In round robin, the first task from queue is picked up (like FCFS). The task may be preempted (unlike FCFS).
 
 <img src="rr_noio.png">
 
 Round Robin can also include priorities. When a higher task arrives, the lower priority task is preempted. Otherwise the task is served liked FCFS. 
 
-Another modification is round robin with interleaving. In this strategy, the scheduler uses timers and timeslices to cycle between the different tasks.
+Another modification is **round robin with interleaving**. In this strategy, the scheduler uses timers and timeslices to cycle between the different tasks.
 
 <img src="rr_interleaving.png">
 
 ### Time Sharing and Timeslices
 
-A **timeslice** is the maximum amount of uninterrupted time given to a task. It is also referred to as a quantum.
+A **timeslice** is the maximum amount of uninterrupted time given to a task. It is also referred to as a quantum. A timeslice is a maximum amount of time, so a task may run with a shorter duration for instance if it needs to do I/O or is blocked on synchronization. In this case, it will be placed on a queue. 
 
-A timeslice is a maximum amount of time, so a task may run with a shorter duration for instance if it needs to do I/O or is blocked on synchronization. In this case, it will be placed on a queue. 
-
-Using timeslices allow tasks to timeshare the CPU. CPU-bound tasks are preempted after timeslice. 
+**Using timeslices allow tasks to timeshare the CPU**. CPU-bound tasks are preempted after timeslice. For I/O bound tasks, this is not super critical, as these tasks will often be placed on wait queues. However, for CPU bound tasks, timeslices are the only way the we can achieve timesharing.
 
 <img src="time_slicing_metrics.png">
 
-You can see that time slicing allows us to achieve fairly good metrics without having to use a shortest job first algorithm. The benefit of this method is that shorter tasks finish sooner, it is more responsive, and lengthy I/O operations are initiated sooner. 
+You can see that time slicing allows us to achieve fairly good metrics without having to use a shortest job first algorithm (which has to know execution times). **The benefit of this method is that shorter tasks finish sooner, it is more responsive, and lengthy I/O operations are initiated sooner.**
 
-The downside of this strategy is all of the interruptions, this creates overhead from the context switching. 
+**The downside** of this strategy is all of the interruptions, this creates **overhead from the context switching**. 
 
 The timeslice should always be bigger than the time to context switch to minimize these overheads. 
 
@@ -129,6 +127,8 @@ To answer **how long a timeslice should be depends on whether we are mainly serv
 ### CPU Bound Timeslice length
 
 <img src="cpu_bound.png">
+
+With a smaller timeslice value, we have to pay the time cost of context switching more frequently. This will degrade our throughput and our average completion time. That being said, smaller timeslices mean that tasks are started sooner, so our average wait time is better when we have smaller timeslices.
 
 For **CPU bound tasks, larger time slices are better**. We don't really care about their responsiveness, the user really cares about when they complete and overall when all the tasks finish. 
 
@@ -146,3 +146,37 @@ For a scenario with only one IO-bound task, we can see that a **smaller timeslic
 <img src="timeslice_utilization.png">
 
 ### Runqueue Data Structure
+
+The runqueue data structure is **only logically a queue**. It can be implemented as multiple queues or even a tree. What's important is that the **data structure is designed so that the scheduler can easily determine which task should be scheduled next**.
+
+For example, if we want I/O and CPU bound tasks to have different timeslice values, we can either place I/O and CPU bound tasks in the same runqueue and have the scheduler check the type, or we can place them in separate runqueues.
+
+One common data structure is a multi-queue structure that maintains multiple distinct queues, each differentiated by their timeslice value. I/O intensive tasks will be associated with the queue with the smallest timeslice values, while CPU intensive tasks will be associated with the largest timeslice values. 
+
+<img src="multi_queue.png">
+
+This is a good solution because it provides timeslicing benefits for I/O tasks and avoids overhead of timeslicing in CPU bound tasks. 
+
+A good question to ask is **how do you know if a task is CPU or I/O intensive**?
+
+Well, one strategy is to use historic metrics, but unfortunately this doesn't help us with new tasks or tasks that have dynamic behaviors. 
+
+One strategy for dealing with these cases is to **move tasks between queues**. 
+
+When a new task enters the system, it is placed in the queue with the smallest timeslice. If the task yields before the timeslice has expired, then a good choice was made. If the task had to be preempted, this implies that the task was more CPU intensive than we though, and we push it down to a queue with a longer timeslice. This pattern repeats until it is sent to the bottom of the queue. 
+
+If a task in a lower queue frequently releases the CPU due to I/O waits, the scheduler can boost the priority of the task and place it in a queue with a a smaller timeslice. 
+
+<img src="feedback_queue.png">
+
+This responsive data structure is called a **multi-level feedback queue**. 
+
+This is **not just a group of priority queues**. There are different scheduling policies associated with each level. Importantly, it **provides feedback on a task and helps the scheduler understand over time which queue a task belongs to** given the makeup of tasks in the system.
+
+## Linux 0(1) Scheduler
+
+This scheduler gets its name from the fact that it can **add/select a task in constant time**, regardless of the number of tasks in the system. It is a preemptive, priority-based scheduler with 140 priority levels. The priority levels are broken into two classes: Priorities from 0-99 are real-time tasks, 100-139 are for timesharing tasks. 
+
+User processes have priorities in the timesharing class, with the default priority in the middle at 120. **Priority levels can be adjusted with "nice values"** which span from -20 to 19. There is a system call to adjust the priority of a user process.
+
+The 0(1) scheduler **borrows from the MLFQ scheduler in that each priority level is associated with a different timeslice value**. It also us**es feedback to understand how to prioritize** tasks in the future. 
