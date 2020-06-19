@@ -193,4 +193,8 @@ The **active list is the primary one the scheduler uses to select the next task 
 
 If a task yields to the CPU to wait on an event or is preempted due to a higher priority task becoming runnable, the time it has spent on the CPU is compared to the timeslice. If it is less than the timeslice, the task is placed back on the active queue for that priority level. 
 
-Only after the entire timeslice has been exhausted will the task move to the expired array.
+Only after the entire timeslice has been exhausted will the task move to the expired array. The expired array contains the inactive tasks. This means that the scheduler will not schedule tasks from this array while there are still tasks on the active array. Once there are no more tasks on the active array, the empty and the active array will be swapped.
+
+This helps to explain why the lowest priority tasks have the smallest timeslices. Remember, we had originally thought to give the lowest priority, CPU intensive tasks the largest timeslices. In this case, however, giving the lowest priority tasks the smallest timeslices ensures that low priority tasks (which only run after higher priority tasks expire), do not block the higher priority tasks for too long. The lower priority tasks get their small window to accomplish their work and then yield back to the more important tasks. 
+
+The 0(1) scheduler was introduced in Linux 2.5. Despite its constant time add/select functionality, though this scheduler was not performant enough to keep up the realtime needs of new applications. For this reason it was replaces by the **completely fair scheduler (CFS)** in Linux 2.6.23, which is now the default scheduler. 
