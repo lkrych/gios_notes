@@ -12,15 +12,15 @@ Running with our toy shop metaphor, an OS scheduler is like a toy shop manager r
 
 ## Scheduling Overview
 
-The CPU scheduler decides how and when processes access shared CPUs. In this lesson we will use **task** to interchangeably mean processes or threads.
+The **CPU scheduler decides how and when processes access shared CPUs**. In this lesson we will use **task** to interchangeably mean processes or threads.
 
 The scheduler concerns itself with **both user-level tasks and kernel-level tasks**.
 
 <img src="scheduling_overview">
 
-The responsibility of the scheduler is to pick a task from the ready queue and dispatch it to the CPU. 
+The responsibility of the scheduler is to **pick a task from the ready queue and dispatch it to the CPU**. 
 
-Whenever the CPU becomes idle, we need to run the scheduler. The goal is to pick another task to run as quickly as possible so that the CPU doesn't sit idle for very long. We also need to run the scheduler when a new task becomes ready. A common way schedulers share the CPU is to set a timer (timeslice).
+**Whenever the CPU becomes idle, we need to run the scheduler**. The goal is to pick another task to run as quickly as possible so that the CPU doesn't sit idle for very long. We also need to run the scheduler when a new task becomes ready. **A common way schedulers share the CPU is to set a timer (timeslice)**. When a timeslice expires, the scheduler must run.
 
 Which task should be selected? The answer **depends on the scheduling policy/algorithm**.
 
@@ -28,8 +28,9 @@ How is the scheduling policy accomplished? The details depend on the **runqueue 
 
 ### Run-to-Completion Scheduling
 
+Run-to-completion scheduling assumes that as soon as a task is assigned to a CPU, it runs until it completes. 
 
-Run-to-completion scheduling is when as soon as a task is assigned to a CPU, it runs until it completes. 
+For the purpose of the discussion, it's necessary to make some assumptions. First we can assume that we have a group of tasks that need to be scheduled. Second, we can assume the we know the execution times of the tasks. Third, we can assume that there is no preemption in the system. Fourth, there is a single CPU.
 
 Because we will be comparing scheduling algorithms, we need some metrics to compare them. 
 
@@ -40,9 +41,9 @@ Because we will be comparing scheduling algorithms, we need some metrics to comp
 
 <img src="fcfs_metrics.png">
 
-The first algorithm we will talk about is **First-Come First-Server (FCFS)**. In this algorithm tasks are scheduled in the order that they arrive. 
+The first algorithm we will talk about is **First-Come First-Server (FCFS)**. In this algorithm tasks are scheduled in the **order that they arrive**. 
 
-Clearly a good way to organize the runqueue, would be a queue, so that tasks can be picked up in a FIFO manner. 
+Clearly a good way to organize the runqueue, would be a **queue**, so that tasks can be picked up in a FIFO manner.  All the scheduler would need to know is the head of the queue and how to dequeue tasks.
 
 To make a decision, all the algorithm will need to do is pop from the queue. 
 
@@ -52,7 +53,7 @@ This design is simple, but the wait time is really long if a long running job is
 
 A variation on this algorithm is **Shortest Job First (SJF)**, which schedules tasks in order of their execution time. 
 
-We will organize the data structure as a queue, but we will need to iterate through it to find the shortest run-time each time to find the next job O(n). **One thing we can do is maintain the queue as an ordered queue**. This makes the insertion more complex, but the selection of a task easier.  Or we can use a tree.
+We could organize the data structure as a queue, but we will need to iterate through it to find the shortest run-time each time to find the next job O(n). **One thing we can do is maintain the queue as an ordered queue**. This makes the insertion more complex, but the selection of a task easier.  Or we can use a tree.
 
 <img src="sjf_metrics.png">
 
@@ -141,5 +142,7 @@ For IO bound tasks, in the scenario above, the two tasks are equivalent because 
 
 For a scenario with only one IO-bound task, we can see that a **smaller timeslice results in better performance**. It allows us to keep the CPU and the I/O devices busy.
 
-
 <img src="timeslice_summary.png">
+<img src="timeslice_utilization.png">
+
+### Runqueue Data Structure
