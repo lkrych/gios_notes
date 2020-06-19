@@ -198,3 +198,27 @@ Only after the entire timeslice has been exhausted will the task move to the exp
 This helps to explain why the lowest priority tasks have the smallest timeslices. Remember, we had originally thought to give the lowest priority, CPU intensive tasks the largest timeslices. In this case, however, giving the lowest priority tasks the smallest timeslices ensures that low priority tasks (which only run after higher priority tasks expire), do not block the higher priority tasks for too long. The lower priority tasks get their small window to accomplish their work and then yield back to the more important tasks. 
 
 The 0(1) scheduler was introduced in Linux 2.5. Despite its constant time add/select functionality, though this scheduler was not performant enough to keep up the realtime needs of new applications. For this reason it was replaces by the **completely fair scheduler (CFS)** in Linux 2.6.23, which is now the default scheduler. 
+
+## Linux CFS Schedulers
+
+One problem with the 0(1) scheduler is that once a task enters the expired queue, it will not get a chance to run again until all other tasks in the active queue have executed for their timeslices. This is a problem for interactive tasks, introducing jitter into interactions that should appear seamless.
+
+In addition, the scheduler doesn't make any **fairness** guarantees, which is the concept that in a given interval of time, **a task should be able to run for an amount of time that is relative to its priority**. 
+
+CFS is now the default scheduler for non-realtime tasks in Linux.
+
+<img src="linux_cfs.png">
+
+**CFS uses a red-black tree as the runqueue structure**. Red-black trees are **self-balancing trees**, which **ensure that all of the paths from the root of the tree to the leaves are approximately the same size**. 
+
+Tasks are ordered in the tree based on the amount of time that they spent running on the CPU, a quantity known as vruntime (virtual runtime). CFS tracks this quantity to the nanosecond.
+
+This runqueue has the property that for a given node, all nodes to the left have lower vruntimes and therefore need to be scheduled sooner, while all nodes to the right have larger vruntimes and therefore can wait longer.
+
+The **CFS algorithm always schedules the node with the least amount of vruntime in the system**, which is typically the leftmost node of the tree. Periodially, CFS will increment the vruntime of the task that is currently executing on the CPU, at which point it will compare the currently running task with the leftmost node. If the currently running task has a larger vruntime, it will preempt the running task in favor of the leftmost node.
+
+For lower priority tasks the vruntime will be updated more frequently, that is the scheduler will often check if it is time to preempt a lower priority task. We can think of time moving more quickly for lower priority tasks. For higher priority tasks the vruntime will be updated less frequently, that is t**he scheduler will rarely check if it is time to preempt a higher priority task**. 
+
+In summary, task selection from the runqueue takes constant time. Adding a task to the runqueue takes log time relative to the total number of tasks in the system.
+
+## Scheduling on Multiprocessors
