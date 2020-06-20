@@ -121,3 +121,4 @@ To find the right element in the page table structure, the virtual address is sp
 The last part of the logical address is still the offset, which is used to actually index into the physical page frame. The first two components of the address are used to index into the different levels of the page tables, and they ultimately produce the PFN that is the starting address of the physical memory region being accessed. **The first portion indexes into the page table directory to get the page table, and the second portion indexes into the page table to get the PFN**. 
 
 In this particular scenario, the address format is such that the outer index occupies 12 bits, the inner index occupies 10 bits, and the offset occupies 12 bits.
+
