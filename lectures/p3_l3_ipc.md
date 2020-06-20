@@ -136,3 +136,43 @@ The POSIX shared memory standard doesn't use segments, but rather **uses files**
 They are not "real" files that live in a filesystem that are used elsewhere by the OS. Instead **they are files that live in the *tmpfs* filesystem**. This filesystem is intended to look and feel like a filesystem, so the OS can reuse a lot of the mechanisms is uses for filesystems, but it is really just a bunch of state that is present in physical memory. The **OS simply uses the same representation and the same data structures that it uses for representing a file to represent a bunch of pages in physical memory** that correspond to a shared memory region.
 
 Since shared memory segments are now referenced by a file descriptor, there is no longer a need for the key generation process. A shared memory region can be created/opened with `shm_open`. To attach shared memory, we can use `mmap` and to detach shared memory we can use `mummap`. To destroy a shared memory region, we can call `shm_unlink`.
+
+## Shared Memory and Sync
+
+When data is placed in shared memory, it can be concurrently accessed by all processes that have access to that shared memory region. Therefore, such accesses must be synchronized to avoid race conditions. This is the same situation we encountered in multithreaded environments.
+
+There are a couple of options for handling inter-process synchronization. We can rely on the mechanisms supported by threading libraries that can be used within processes. For example, two pthreads processes can synchronize amongst each other using pthreads mutexes and condition variables. Alternatively, the OS supports certain mechanisms for synchronization that are available for IPC.
+
+### Pthreads Sync for IPC
+
+One of the attributes that are used to specify the properties of the mutex or condition variable when they are created is **whether or not that synchronization variable is private to a process or shared amongst processes**.
+
+The keyword for this is `PTHREAD_PROCESS_SHARED`. If we specify this in the attribute structs that are passed to mutex/condition variable initialization we will ensure that our synchronization variables will be visible across processes.
+
+One very important thing to remember is that these data structures must also live in shared memory!
+
+<img src="pthread_sync_ipc.png">
+
+To create the shared memory segment, we first need to create our segment identifier. We do this with `ftok`, passing `arg[0]` which is the pathname for the program executable as well as some integer parameter. We pass this id into `shmget`, where we specify a segment size of 1kb and also pass in some flags.
+
+Using the segment id, we attach the segment with `shmat`, which returns a shared memory address, which we assign to the variable `shm_address`. This is the virtual address in this process' address space that points to the physically shared memory.
+
+Then we cast the address to the datatype of the struct we defined, `shm_data_struct_t`. This struct has two fields, one is the actual buffer of information, the data, and the other component is the mutex. The mutex controls access to the data.
+
+To actually create the mutex, we first have to create the mutexattr struct. Once we create it, we can set the pshared attribute with PTHREAD_PROCESS_SHARED. Then we initialize the mutex with that data structure, using the pointer to the mutex inside the struct that lives in the shared memory region.
+
+This set of operations will properly allocate and initialize a mutex that is shared amongst processes.
+
+### Sync for Other IPC
+
+In addition, shared memory accesses can be synchronized using OS provided mechanisms for inter process interactions. This is particularly important because the `PTHREAD_PROCESS_SHARED` option for pthreads isnt always necessarily supported by every platform.
+
+We can rely on other means of synchronization in those cases such as message queues and semaphores.
+
+With message queues, we can implement mutual exclusion via send/recv operations. For example, process A can write to the data in shared memory and then send a "ready" message into the queue. Process B can receive the msg, read the data, and send an "ok" message back.
+
+**Semaphores** are an OS support synchronization construct and a binary semaphore can have two states. When a semaphore has a value of 0, the process will be blocked, if it has a value of 1, the process will decrement the semaphore and proceed.
+
+## IPC command line tools
+
+<img src="linux_ipc.png">
