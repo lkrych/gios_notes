@@ -99,3 +99,25 @@ If we had a 64-bit architecture, we could represent 2^64 bytes of physical memor
 Remember that page tables a per-process allocation.
 
 It is important to know that a process will not use all fo the theoretically available virtual memory. Even on 32-bit architectures, not all 4GB is used by every type of process. The problem is that page tables assume that there is an entry for every VPN, regardless of whether the VPN is needed by the process or not.
+
+## Multi-level Page Tables
+
+OS's don't use flat page tables anymore, they use hierarchical page table structures.
+
+<img src="hierarchical_pt.png">
+
+The outer level is referred to as the **page table directory**. Its elements are not pointers to individual page frames, but rather **pointers to page table themselves**.
+
+The inner level has proper page tables that actually point to page frames in physical memory. Their entries have the page frame number and all the protection bits.
+
+The internal page table exists only for those virtual memory regions that are actually valid. Any holes in the virtual memory space will result in lack of internal page tables.
+
+If a process requests more memory to be allocated via malloc, the OS will check and potentially create another page table for the process, adding a new entry to the page table directory. The new internal page table entry will correspond to some new virtual memory region that the process has requested.
+
+To find the right element in the page table structure, the virtual address is split into more components. 
+
+<img src="multilevel_page_translation.png">
+
+The last part of the logical address is still the offset, which is used to actually index into the physical page frame. The first two components of the address are used to index into the different levels of the page tables, and they ultimately produce the PFN that is the starting address of the physical memory region being accessed. **The first portion indexes into the page table directory to get the page table, and the second portion indexes into the page table to get the PFN**. 
+
+In this particular scenario, the address format is such that the outer index occupies 12 bits, the inner index occupies 10 bits, and the offset occupies 12 bits.
