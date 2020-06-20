@@ -88,4 +88,51 @@ In memory-based IPC, CPU cycles are spent to map physical memory into the addres
 
 The memory-mapping operation is costly, but it is a one-time cost, and can pay off even if IPC is performed once. In particular, when we need to move large amounts of data from one address space to another address space, the time it takes to copy via message-based IPC greatly exceeds the setup cost of memory-mapping.
 
-## SysV Shared Memory
+## SysV Shared Memory API
+
+To create or open a segment we use
+
+```c
+shmget(shmid, size, flag)
+```
+We can specify the size of the segment through the `size` argument, and we can set various flags, like permission flags, with the `flag` argument.
+
+The `shmid` is the key that references the shared memory segment. This is not created by the operating system, but rather has to be passed to it by the application. To generate this key, we can use:
+
+```c
+ftok(pathname, proj_id)
+```
+This function generates a token based on its arguments. If you pass it the same arguments, you will always get the same key. It's basically a **hashing function**. This is how **different processes can agree upon how they will obtain a unique key for the memory segment they wish to share**. 
+
+To attach the shared memory segment into the address space of the process, we can use:
+
+```c
+shmat(shmid, addr, flags)
+```
+The programmer has the option to provide the virtual addresses to which the segment should be mapped, using the `addr` argument. If `NULL` is passed, the OS will choose some suitable addresses.
+
+The returned virtual memory address can be interpreted in various ways, so it is the programmer's responsibility to cast the address to that memory region to the appropriate type.
+
+To detach a segment, we can use
+
+```c
+shmdt(shmid)
+```
+
+This call invalidates the virtual to physical mappings associated with this shared segment.
+
+Finally, to send commands to the operating system in reference to the shared memory segment we can use:
+
+```c
+shmctl(shmid, cmd, buf)
+```
+
+if we specify `IPC_RMID` as the `cmd` we can destroy the segment.
+
+## POSIX Shared Memory API
+
+The POSIX shared memory standard doesn't use segments, but rather **uses files**.
+
+They are not "real" files that live in a filesystem that are used elsewhere by the OS. Instead **they are files that live in the *tmpfs* filesystem**. This filesystem is intended to look and feel like a filesystem, so the OS can reuse a lot of the mechanisms is uses for filesystems, but it is really just a bunch of state that is present in physical memory. The **OS simply uses the same representation and the same data structures that it uses for representing a file to represent a bunch of pages in physical memory** that correspond to a shared memory region.
+
+Since shared memory segments are now referenced by a file descriptor, there is no longer a need for the key generation process. A shared memory region can be created/opened with `shm_open`. To attach shared memory, we can use `mmap` and to detach shared memory we can use `mummap`. To destroy a shared memory region, we can call `shm_unlink`.
