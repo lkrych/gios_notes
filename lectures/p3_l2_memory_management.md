@@ -65,3 +65,37 @@ If the **MMU sees that this bit is 0 when an access is occurring, it will raise 
 In summary, the **OS creates a page table for every single process in the system**. That means that whenever a context switch is performed, the OS must swap in the page table associated with a new process. **Hardware assists with page table access by maintaining a register that points to the active page table**. On x86 platforms, this register is the CR3 register. 
 
 <img src="cr3.png">
+
+## Page Table Entry
+
+Every page table entry will have at least a PFN and a valid bit. This bit is also called a present bit, as it represents whether of not the contents of virtual memory are present in physical memory or not.
+
+There are a number of other bits that are present in the page table entry which the OS uses to make memory management decisions and also that the hardware understands and knows how to interpret.
+
+<img src="page_table_entry.png">
+
+For example, most hardware supports a **dirty bit** which gets set whenever a page is written to. This is useful in file systems, where files are cached in memory. The OS uses the dirty bit to see which files need to be updated on disk.
+
+It is also useful to keep track of an **access bit**, which tells the OS whether the page has been accessed. This is useful for deciding which entries to swap out of the page table.
+
+There are also **protection bits** which specify whether a page is allowed to be read, written or executed.
+
+The **MMU uses the page table entry not just to perform the address translation, but also to rely on these bits to determine the validity of the access**. If the hardware determines that a physical memory access cannot be performed, it causes a page fault.
+
+If this happens, then the CPU will place an error code on the stack of the kernel, and it will generate a trap into the OS kernel, which will in turn invoke the page fault handler. This handler determines the action to take based on the error code and the faulting address.
+
+On x86 platforms, the error code is generated from some of the flags in the page table entry and the faulting address is stored in the CR2 register. 
+
+## Page Table Size
+
+A page table has a number of entries that is equal to the number of virtual page numbers that exist in a virtual address space. If we want to calculate the **size of a page table we need to know both the size of a page table entry and the number of entries contained in a page table**. 
+
+On a 32-bit architecture, where each address is represented by 32 bits, each of the page table entries is 4 bytes (32 bits) in size, and this includes both the PFN and the flags. The total number of page table entries depends on the total number of VPNs.
+
+In a 32-bit architecture there are 2^32(4GB) of addressable memory. A common page size is 4KB. In order to represent 4GB of memory in 4KB pages, we need 2^32/2^12 = 2^20 entries in our page table. Since each entry is 4 bytes long, we need 2^22 bytes (4MB) of memory to represent our page table. 
+
+If we had a 64-bit architecture, we could represent 2^64 bytes of physical memory in chunks of 2^12 bytes. Since each entry is now 8 bytes long, we need 2^3 * 2^64/2^12 = 32PB.
+
+Remember that page tables a per-process allocation.
+
+It is important to know that a process will not use all fo the theoretically available virtual memory. Even on 32-bit architectures, not all 4GB is used by every type of process. The problem is that page tables assume that there is an entry for every VPN, regardless of whether the VPN is needed by the process or not.
