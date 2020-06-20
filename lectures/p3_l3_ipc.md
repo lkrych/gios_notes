@@ -176,3 +176,19 @@ With message queues, we can implement mutual exclusion via send/recv operations.
 ## IPC command line tools
 
 <img src="linux_ipc.png">
+
+## How to think about designing IPC
+
+Let's consider two multithreaded processes in which the threads need to communicate via shared memory.
+
+First, consider how many segments the processes will need to communicate.
+
+Will you use one large segment? If so, you will have to implement some kind of management of the shared memory. You will need some manager that will be responsible for allocating and freeing memory in this region.
+
+Alternatively, you can have multiple segments, one for each pairwise communication. If you choose this strategy, it is probably a smart idea to pre-allocate a pool of segments ahead of time, so you don't need to incur the cost of creating a segment in the middle of execution. With this strategy, you will also need to manage how these segments are picked up for use by the pairs. A queue of segment ids is probably sufficient.
+
+Second, you will need to think about how large your segments should be.
+
+If the size of the data is known up front (and is static), you can just make all your segments that size. Typically an operating system will have a limit on the maximum segment size, so this strategy only works in very restricted cases.
+
+If you want to support arbitrary messages sizes that are potentially much larger than the segment size, one option is to transfer the data in rounds. The sending process sends the message in chunks, and the receiving process reads in those chunks and saves them somewhere until the entire message is received. In this case, the programmer will need to include some protocol to track the progress of the data movement through the shared memory region.
