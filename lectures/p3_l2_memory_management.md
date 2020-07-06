@@ -196,3 +196,20 @@ Once the kernel allocates some memory through malloc, the kernel is no longer in
 
 ## Memory Allocation Challenges
 
+Let's talk about fragmentation. Consider the following scenario. We have a page-based memory management system that manages 16 page frames. It takes requests for 2 or 4 pages at a time.
+
+Four requests come in, one request for two page frames, and three requests for four page frames. 
+
+<img src="fragmentation1.png">
+
+Now suppose that the initial two requests are freed, and a request for four page frames comes in. What do we do?! **We have four available page frames but the allocator cannot satisfy the request because the pages are not contiguous**. This is known as **external fragmentation**.
+
+A better way to have originally allocated the memory is like so:
+
+<img src="fragmentation2.png">
+
+In summary, **an allocator must allocate memory in such a way that it can coalesce free page frames when the memory is no longer in use in order to limit external fragmentation**.
+
+## Linux Kernel Allocators
+
+The linux kernel relies on two main allocators: the **buddy allocator** and the **slab allocator**.
