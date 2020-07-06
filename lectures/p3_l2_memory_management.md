@@ -161,3 +161,38 @@ A linear scan of the inverted page table is performed when a process attempts to
 Linear scans are slow, but thankfully the TLB comes to rescue to speed up lookups. That being said, there are ways to improve lookups. One common way is to use **hashing page tables**. The address is hashed and looked up in a hash table, where the hash points to a small linked list of possible matches. This allows us to speed up the linear search to consider just a few possibilities.
 
 <img src="hashing_page_table.png">
+
+## Segmentation
+
+Virtual to physical memory mappings can also be maintained with **segments**. With segments, **the address space is divided into components of arbitrary size**, and the components will correspond to some logically meaningful section of the address sapce, like the code, heap, data, or stack.
+
+A virtual address in segmented memory mode includes a **segment selector** and an offset. The selector is used in combination with a **descriptor table** to produce a physical address which is combined with the offset to describe a precise memory location.
+
+In its pure form, a segment could be represented with a contiguous section of physical memory. In that case, the segment would be defined by its base address and its limit registers. 
+
+In practice, segmentation and paging are used together. The linear address that is produced from the logical address by the segmentation process is then passed to the paging unit to ultimately produce the physical address. 
+
+<img src="segmentation.png">
+
+## Page Size
+
+The size of the memory page, or frame, is determined by the number of bits in the offset. For example, if we have a 10-bit offset, our page size is 2 ^ 10 bytes, or 1KB. A 12-bit offset means we have a page size of 4KB.
+
+In practice, systems support different page sizes. For Linux, on x86 platforms there are several common page sizes. 4KB pages are pretty popular, and are the default in the Linux environment. Page sizes can be much larger.
+
+Large pages in LInux are 2MB in size, requiring an offset of 21 bits. Huge pages are 1GB in size, requiring 30 bits.
+
+One benefit of larger pages is that more bits are used for the offset, so fewer bits are used for the virtual page number. This means there are fewer pages, which means we have a smaller page table. Large pages reduce the page table size by a factor of 512, and huge page tables reduce the size by 1024 compared to page tables with 4KB page size.
+
+## Memory Allocation
+
+**Memory allocation** incorporates **mechanisms to decide what are the physical pages that will be allocated to a particular virtual memory region**. Memory allocators can exist at the kernel level as well as the user-level.
+
+**Kernel level allocators** are responsible for **allocating pages for the kernel** and also for **certain static state of processes** when they are created (code, stack, etc.). In addition, kernel level allocators are responsible for keeping track of the **free memory that is available in the system**. 
+
+**User level allocators** are used for dynamic process state - **the heap**. This is memory that is dynamically-allocated during the process's execution. The basic interface for these allocators includes `malloc` and `free`. These calls request some amount of memory from the kernel's free pages and then ultimately release it when they are done.
+
+Once the kernel allocates some memory through malloc, the kernel is no longer involved in the management of the memory. That memory is now under the purview of the user level allocator. 
+
+## Memory Allocation Challenges
+
