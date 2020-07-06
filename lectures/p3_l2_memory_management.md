@@ -145,3 +145,19 @@ The standard technique to **avoid these accesses to memory** is to use a **page 
 On each address translation, the TLB cache is first referenced, and if the results can be generated from the lookup we can bypass all the page table navigation. If we have a miss, we still need to perform the lookup.
 
 In addition to proper address translation, the TLB entries will contain all of the necessary protection/validity bits that ensure that access is correct and the MMU will generate a fault if needed. 
+
+## Inverted Page Tables
+
+Standard page tables serve to map virtual memory to physical memory on a per process basis. Each process has its own page table, so the total amount of virtual memory "available" in the system is proportional to the number of processes currently in the system.
+
+A different way to think about structuring virtual memory is to make it closer to physical memory layout. **Inverted page tables** are **managed on a system-wide basis, not on a per-process basis**, and **each entry in the inverted page table points to a frame in main memory**.
+
+The representation of a logical memory address when using inverted page tables is slightly different. The memory address contains the process ID (PID) of the process attempting to access the memory address as well as the virtual address and the offset.
+
+A linear scan of the inverted page table is performed when a process attempts to perform a memory access. When the correct entry is found - validated by the combination of PID and virtual address - it is the index of that entry that is the frame number in physical memory. That index combined with the offset serves to reference the exact physical address. 
+
+<img src="inverted_page_table.png">
+
+Linear scans are slow, but thankfully the TLB comes to rescue to speed up lookups. That being said, there are ways to improve lookups. One common way is to use **hashing page tables**. The address is hashed and looked up in a hash table, where the hash points to a small linked list of possible matches. This allows us to speed up the linear search to consider just a few possibilities.
+
+<img src="hashing_page_table.png">
