@@ -122,4 +122,26 @@ The last part of the logical address is still the offset, which is used to actua
 
 In this particular scenario, the address format is such that the outer index occupies 12 bits, the inner index occupies 10 bits, and the offset occupies 10 bits.
 
-This means that a given page table can contain 2^10 entries, and each entry can address 2^10 bytes of physical memory. This means that each page table can address about 1MB of memory. Whenever there is a gap in virtual memory that is 1MB or greater, we don't need to fill in the gap with unused page tables. For example, if we have a page table containing pages 0-999, and we allocate another page table containing pages 30000-30999, we don't need to allocate the 29 page tables in between. This will reduce the overall size of the page table(s) that are required for a particular process. This is in contrast to the "flat" page table, in which every entry needs to be able to translate every single virtual address and it has entries for every virtual page number. There can't be any gaps in a flat page table. 
+This means that a given page table can contain 2^10 entries, and each entry can address 2^10 bytes of physical memory. This means that each page table can address about 1MB of memory. Whenever there is a gap in virtual memory that is 1MB or greater, we don't need to fill in the gap with unused page tables. For example, if we have a page table containing pages 0-999, and we allocate another page table containing pages 30000-30999, we don't need to allocate the 29 page tables in between. This will reduce the overall size of the page table(s) that are required for a particular process. This is in contrast to the "flat" page table, in which every entry needs to be able to translate every single virtual address and it has entries for every virtual page number. There can't be any gaps in a flat page table.
+
+The notion of a hierarchical page table can be extended to use even more layers. This technique is important to 64-bit architectures. The page table requirements are larger in these architectures and as a result are often more sparse. The third level can contain pointers to page table directories, and the fourth level is a map of page table directory pointers.
+
+Because of this we have larger gaps between page table that are actually allocated. With four level addressing structures, we may be able to save entire page table directories from being allocated as a result of these gaps. 
+
+As we add more levels, the internal page tables/directories end up covering smaller regions of the virtual address space. As a result, it is more likely that the virtual address space will have gaps that will match that granularity, and we will be able to reduce the size of the page table as a result.
+
+The downside of adding more levels to the page table structure is that there are more memory accesses required for translation, since we will have access to more page table components before actually accessing the physical memory. Therefore, the translation latency will be increased. 
+
+## Speeding up Translation with a TLB
+
+Adding levels to our page table structure adds overhead to the address translation process.
+
+In the simple, single-level page table design, we need to memory references: one to access the page table entry, and one to access the actual physical memory.
+
+In the four-level page table, we will need to perform four memory accesses to navigate through the page table entries before we can perform our physical memory reference. 
+
+The standard technique to **avoid these accesses to memory** is to use a **page table cache**.  On most architectures, the MMU integrates **a hardware cache used for address translations**. This cache is called the **translation lookaside buffer (TLB)**.
+
+On each address translation, the TLB cache is first referenced, and if the results can be generated from the lookup we can bypass all the page table navigation. If we have a miss, we still need to perform the lookup.
+
+In addition to proper address translation, the TLB entries will contain all of the necessary protection/validity bits that ensure that access is correct and the MMU will generate a fault if needed. 
