@@ -279,3 +279,37 @@ In Linux, a number of parameters are available to help configure the swapping na
 The default replacement algorithm in Linux is a variation of LRU, which gives a second chance, meaning it performs two scans before determining which pages are the ones that should be swapped out. 
 
 ## Copy On Write
+
+OS's rely on the MMU to perform address translation as well as access tracking and protection enforcement. The same hardware can be used to build other services.
+
+One such mechanism is called **Copy-on-Write(COW)**. When we need to create a new process, we need to re-create the entire parent process by copying over its entire address space. However, many of the pages in the parent address space are static, so why do we have to incur that copying cost?
+
+In order to avoid unnecessary copying, a new process's address space, entirely or in part, we will just point to the address space of its parent. The same physical address may be referred to by two completely different virtual addresses belonging to the two processes. If we do this, we need to make sure to **write protect** the page as a way to track accesses to it. 
+
+<img src="cow.png">
+
+If the page is only going to be read, we save memory and we also save on the CPU cycles we would waste performing the unnecessary copy.
+
+If a write request is issued for the physical address via either one of the virtual addresses, the MMU will detect that the page is write protected and will issue a page fault.
+
+At this point, the operating system **will finally create the copy of the memory page, and will update the page table of the faulting process to point to the newly-allocated physical memory**. Note that only the pages that need to be updated will be copied.
+
+We call this mechanism copy-on0-write because the copy cost will only be paid when a write request comes in.
+
+## Failure Management Checkpointing
+
+Another useful OS service that can benefit from the hardware support for memory management is **checkpointing**.
+
+Checkpointing is a failure and recovery management technique. The idea behind checkpointing is to **periodically save process state**. A process failure may be unavoidable, but with checkpointing, we can restart the process from a known, recent state instead of having to reinitialize it.
+
+A simple approach to checkpointing would be to pause the execution of a process and copy its entire state.
+
+A better approach is to take advantage of the hardware support for memory management and have it try to optimize the disruption the checkpointing will cause on the execution of the process. We can write-protect the process state and try to copy everything at once.
+
+However, since the process continues executing, it will continue dirtying pages. The dirty pages can be tracked using MMU support, and we can copy only the diffs on the pages that have been modified. That allows us to provide for incremental checkpoints and not waste a bunch of memory.
+
+It also makes the recovery of a process a little more difficult because we have to rebuild the process state from multiple diffs.
+
+The basic mechanism used in checkpointing can also be used in other services. For instance, debugging often relies on a technique called rewind-replay. Rewind means that we restart the execution of the process from an earlier checkpoint. We will then replay the execution from that checkpoint onwards to see if we can reproduce the error.
+
+Migration is another service that can benefit from the same mechanisms behind checkpointing. With migration, we checkpoint the process to another machine, and then we restart it on some other machine. This is useful for disaster recovery.
