@@ -1,5 +1,27 @@
 # Memory Management
 
+![](https://media.giphy.com/media/d3mlE7uhX8KFgEmY/giphy.gif)
+
+## Table of Contents
+* [Introduction](#introduction)
+* [Memory Management Hardware Support](#memory-management-hardware-support)
+* [Page Tables](#page-tables)
+    * [Page Table Entry](#page-table-entry)
+    * [Page Table Size](#page-table-size)
+    * [Multi-level Page Tables](#multi-level-page-tables)
+    * [Speeding up Translation: TLB](#speeding-up-translation-with-a-tlb)
+    * [Inverted Page Tables](#inverted-page-tables)
+    * [Segmentation](#segmentation)
+    * [Page Size](#page-size)
+* [Memory Allocation](#memory-allocation)
+    * [Memory Allocation Challenges](#memory-allocation-challenges)
+    * [Linux Kernel Allocators](#linux-kernel-allocators)
+    * [Demand Paging](#demand-paging)
+    * [Page Replacement](#page-replacement)
+    * [Copy on Write](#copy-on-write)
+    * [Checkpointing](#checkpointing)
+
+
 ## Introduction
 
 One of the goals of the OS is to manage the physical resources, in this lecture we will talk about DRAM, and how it is managed on behalf of one or more executing processes. 
@@ -20,7 +42,7 @@ Paging is the dominant memory management mechanism.
 
 ## Memory Management: Hardware Support
 
-<img src="hardware_support.png">
+<img width="600" src="p3_l2_resources/hardware_support.png">
 
 Hardware mechanisms help make memory management decisions easier, faster and more reliable.
 
@@ -38,13 +60,13 @@ Finally, the actual translation of the physical address from the virtual address
 
 Pages are the most popular method for memory management. They are used to **convert virtual memory addresses into physical memory addresses**. 
 
-<img src="page_table.png">
+<img width="600" src="p3_l2_resources/page_table.png">
 
 For each virtual address, an entry in the page table is used to determine the actual physical address associated with that virtual address.
 
 The sizes of the **pages in virtual memory are identical to the sizes of the page frames in physical memory**. By keeping the size the same, the OS does not need to manage the translation of every single virtual address within a page. Instead, we translate the first virtual address in a page to the first physical address in a page frame. The rest of the memory addresses in the page map to the corresponding offsets in the page frame. As a result, we can reduce the number of entries in the page table. 
 
-<img src="vpn_pfn.png">
+<img width="600" src="p3_l2_resources/vpn_pfn.png">
 
 What this means is that **only the first portion of the virtual address is used to index into the page table**. We call this part of the address the **virtual page number (VPN)**, and the rest of the virtual address is the **offset**. The VPN is used as an index into the page table, which will produce the **physical frame number (PFN)**, which is the first physical address of the frame in DRAM. To complete the full translation, the **PFN needs to be summed with the offset specified in the latter portion of the virtual address to produce the actual physical address**. The PFN with the offset can be used to reference a specific location in DRAM.
 
@@ -64,7 +86,7 @@ If the **MMU sees that this bit is 0 when an access is occurring, it will raise 
 
 In summary, the **OS creates a page table for every single process in the system**. That means that whenever a context switch is performed, the OS must swap in the page table associated with a new process. **Hardware assists with page table access by maintaining a register that points to the active page table**. On x86 platforms, this register is the CR3 register. 
 
-<img src="cr3.png">
+<img width="600" src="p3_l2_resources/cr3.png">
 
 ## Page Table Entry
 
@@ -72,7 +94,7 @@ Every page table entry will have at least a PFN and a valid bit. This bit is als
 
 There are a number of other bits that are present in the page table entry which the OS uses to make memory management decisions and also that the hardware understands and knows how to interpret.
 
-<img src="page_table_entry.png">
+<img width="600" src="p3_l2_resources/page_table_entry.png">
 
 For example, most hardware supports a **dirty bit** which gets set whenever a page is written to. This is useful in file systems, where files are cached in memory. The OS uses the dirty bit to see which files need to be updated on disk.
 
@@ -104,7 +126,7 @@ It is important to know that a process will not use all fo the theoretically ava
 
 OS's don't use flat page tables anymore, they use hierarchical page table structures.
 
-<img src="hierarchical_pt.png">
+<img width="600" src="p3_l2_resources/hierarchical_pt.png">
 
 The outer level is referred to as the **page table directory**. Its elements are not pointers to individual page frames, but rather **pointers to page table themselves**.
 
@@ -116,7 +138,7 @@ If a process requests more memory to be allocated via malloc, the OS will check 
 
 To find the right element in the page table structure, the virtual address is split into more components. 
 
-<img src="multilevel_page_translation.png">
+<img width="600" src="p3_l2_resources/multilevel_page_translation.png">
 
 The last part of the logical address is still the offset, which is used to actually index into the physical page frame. The first two components of the address are used to index into the different levels of the page tables, and they ultimately produce the PFN that is the starting address of the physical memory region being accessed. **The first portion indexes into the page table directory to get the page table, and the second portion indexes into the page table to get the PFN**. 
 
@@ -156,11 +178,11 @@ The representation of a logical memory address when using inverted page tables i
 
 A linear scan of the inverted page table is performed when a process attempts to perform a memory access. When the correct entry is found - validated by the combination of PID and virtual address - it is the index of that entry that is the frame number in physical memory. That index combined with the offset serves to reference the exact physical address. 
 
-<img src="inverted_page_table.png">
+<img width="600" src="p3_l2_resources/inverted_page_table.png">
 
 Linear scans are slow, but thankfully the TLB comes to rescue to speed up lookups. That being said, there are ways to improve lookups. One common way is to use **hashing page tables**. The address is hashed and looked up in a hash table, where the hash points to a small linked list of possible matches. This allows us to speed up the linear search to consider just a few possibilities.
 
-<img src="hashing_page_table.png">
+<img width="600" src="p3_l2_resources/hashing_page_table.png">
 
 ## Segmentation
 
@@ -172,7 +194,7 @@ In its pure form, a segment could be represented with a contiguous section of ph
 
 In practice, segmentation and paging are used together. The linear address that is produced from the logical address by the segmentation process is then passed to the paging unit to ultimately produce the physical address. 
 
-<img src="segmentation.png">
+<img width="600" src="p3_l2_resources/segmentation.png">
 
 ## Page Size
 
@@ -200,13 +222,13 @@ Let's talk about fragmentation. Consider the following scenario. We have a page-
 
 Four requests come in, one request for two page frames, and three requests for four page frames. 
 
-<img src="fragmentation1.png">
+<img width="600" src="p3_l2_resources/fragmentation1.png">
 
 Now suppose that the initial two requests are freed, and a request for four page frames comes in. What do we do?! **We have four available page frames but the allocator cannot satisfy the request because the pages are not contiguous**. This is known as **external fragmentation**.
 
 A better way to have originally allocated the memory is like so:
 
-<img src="fragmentation2.png">
+<img width="600" src="p3_l2_resources/fragmentation2.png">
 
 In summary, **an allocator must allocate memory in such a way that it can coalesce free page frames when the memory is no longer in use in order to limit external fragmentation**.
 
@@ -216,7 +238,7 @@ The linux kernel relies on two main allocators: the **buddy allocator** and the 
 
 The **buddy allocator** starts with some consecutive memory region that is free that is a power of two. **Whenever a request comes in, the allocator subdivides the area into smaller chunks such that every one of them is also a power of two**. It will continue subdividing until it finds a small enough chunk that is a power of two that can satisfy the request.
 
-<img src="buddy.png">
+<img width="600" src="p3_l2_resources/buddy.png">
 
 First, a request for 8 units comes in. The allocator divides the 64 unit chunk into two chunks of 32. One chunk of 32 becomes 2 chunks of 16, and one of those chunks becomes two chunks of 8. We can fill our first request. Suppose a request for 8 more units comes in. We have another free chunk of 8 units from splitting 16, so we can fill our second request. Suppose a request for 4 units comes in. We now have to subdivide our other chunk of 16 units into two chunks of 8, and we subdivide one of the chunks of 8 into two chunks of 4. At this point we can fill our third request.
 
@@ -230,7 +252,7 @@ Because the buddy allocator has granularity of powers of two, there will be some
 
 Thankfully, we can leverage the **slab allocator**. The slab allocator **builds custom object caches on top of slabs**. The slabs themselves represent contiguously allocated physical memory. When the kernel starts it will pre-create caches for different objects, like the task struct (which is nowhere close to a power of 2 at 1.7kb). 
 
-<img src="slab.png">
+<img width="600" src="p3_l2_resources/slab.png">
 
 Then, when an allocation request occurs, it will go straight to the cache and it will use one of the elements in the cache. In none of the entries is available, the kernel will allocate another slab, and it will pre-allocate another portion of contiguous memory to be managed by the slab allocator. 
 
@@ -248,7 +270,7 @@ At that point, the kernel can establish that the page has been swapped out and c
 
 Once the page is brought into memory, the OS will determine a free frame where this page can be placed (this will not be guaranteed to be the same frame where it reside before), and it will use the PFN to appropriately update the page table entry that corresponds to the virtual address for that page.
 
-<img src="demand_paging.png">
+<img width="600" src="p3_l2_resources/demand_paging.png">
 
 At that point, control is handed back to the process that issued this reference, and the program counter of the process will be restarted with the same instruction, so that this reference will now be made again. This time the reference will succeed.
 
@@ -286,7 +308,7 @@ One such mechanism is called **Copy-on-Write(COW)**. When we need to create a ne
 
 In order to avoid unnecessary copying, a new process's address space, entirely or in part, we will just point to the address space of its parent. The same physical address may be referred to by two completely different virtual addresses belonging to the two processes. If we do this, we need to make sure to **write protect** the page as a way to track accesses to it. 
 
-<img src="cow.png">
+<img width="600" src="p3_l2_resources/cow.png">
 
 If the page is only going to be read, we save memory and we also save on the CPU cycles we would waste performing the unnecessary copy.
 
@@ -296,7 +318,7 @@ At this point, the operating system **will finally create the copy of the memory
 
 We call this mechanism copy-on0-write because the copy cost will only be paid when a write request comes in.
 
-## Failure Management Checkpointing
+## Checkpointing
 
 Another useful OS service that can benefit from the hardware support for memory management is **checkpointing**.
 
