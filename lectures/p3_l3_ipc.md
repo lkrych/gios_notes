@@ -1,5 +1,20 @@
 # Inter process Communication (IPC)
 
+## Table of Contents
+
+* [Introduction](#introduction)
+* [Message-based IPC](#message-based-ipc)
+    * [Pipes](#forms-of-message-passing-pipes)
+    * [Message Queues](#forms-of-message-passing-message-queues)
+    * [Sockets](#forms-of-message-passing-sockets)
+* [Shared Memory IPC](#shared-memory-ipc)
+    * [Copy vs Map](#copy-vs-map)
+    * [SysV Shared Memory](#sysv-shared-memory-api)
+    * [POSIX Shared Memory](#posix-shared-memory-api)
+    * [Shared Memory and Sync](#shared-memory-and-sync)
+    * [Sync for Other IPC](#sync-for-other-ipc)
+* [Thinking about IPC](#how-to-think-about-designing-ipc)
+
 ## Introduction
 
 **Inter process communication (IPC)** refers to **a set of mechanisms that the OS must support in order to permit multiple processes to interact with each other**. This includes mechanisms related to **synchronization, coordination and communication**.
