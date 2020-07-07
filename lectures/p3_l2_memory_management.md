@@ -213,3 +213,69 @@ In summary, **an allocator must allocate memory in such a way that it can coales
 ## Linux Kernel Allocators
 
 The linux kernel relies on two main allocators: the **buddy allocator** and the **slab allocator**.
+
+The **buddy allocator** starts with some consecutive memory region that is free that is a power of two. **Whenever a request comes in, the allocator subdivides the area into smaller chunks such that every one of them is also a power of two**. It will continue subdividing until it finds a small enough chunk that is a power of two that can satisfy the request.
+
+<img src="buddy.png">
+
+First, a request for 8 units comes in. The allocator divides the 64 unit chunk into two chunks of 32. One chunk of 32 becomes 2 chunks of 16, and one of those chunks becomes two chunks of 8. We can fill our first request. Suppose a request for 8 more units comes in. We have another free chunk of 8 units from splitting 16, so we can fill our second request. Suppose a request for 4 units comes in. We now have to subdivide our other chunk of 16 units into two chunks of 8, and we subdivide one of the chunks of 8 into two chunks of 4. At this point we can fill our third request.
+
+When we release one chunk of 8 units, we have a little bit of fragmentation, but once we release the other chunk of 8 units, those two chunks are combined to make one free chunk of 16 units. 
+
+Fragmentation exists in the buddy allocator, but **on free, one chunk can check in with its "buddy" chunk (of the same size) to see if it is also free, at which point the two will aggregate into a larger chunk.**
+
+Buddy checking continues up the tree, aggregating as much as possible. The reason why the chunks are powers of two is so that the addresses of buddies only differs by one bit.
+
+Because the buddy allocator has granularity of powers of two, there will be some internal fragmentation using the buddy allocator. This is a problem because there are a lot of data structures in the Linux Kernel that are not close to powers of 2 in size. 
+
+Thankfully, we can leverage the **slab allocator**. The slab allocator **builds custom object caches on top of slabs**. The slabs themselves represent contiguously allocated physical memory. When the kernel starts it will pre-create caches for different objects, like the task struct (which is nowhere close to a power of 2 at 1.7kb). 
+
+<img src="slab.png">
+
+Then, when an allocation request occurs, it will go straight to the cache and it will use one of the elements in the cache. In none of the entries is available, the kernel will allocate another slab, and it will pre-allocate another portion of contiguous memory to be managed by the slab allocator. 
+
+The **benefit of the slab allocator is that internal fragmentation is avoided**. The entities being allocated on the slab are the exact size of the objects being stored in them. External fragmentation isn't really an issue either. Since each entry can store an object of a given size, and only objects of a given size will be stored, there will never be any unfillable gaps in the slab.
+
+## Demand Paging
+
+Since the **physical memory is much smaller than the addressable virtual memory, allocated pages don't always have to be present in physical memory**. Instead, the backing physical page frame can be repeatedly **saved and stored to and from some secondary storage like disk**.
+
+This process is known as **demand paging**, in this process, pages are swapped from DRAM to a secondary storage device like a disk, where they reside on a special swap partition.
+
+When a page is not present in memory, it has its present bit in the paging table entry set to 0. When there is a reference to that page, then the MMU will raise an exception - a **page fault** - and that will cause a trap to the kernel.
+
+At that point, the kernel can establish that the page has been swapped out and can determine the location of the page on the secondary device. It will issue an I/O operation to retrieve the page.
+
+Once the page is brought into memory, the OS will determine a free frame where this page can be placed (this will not be guaranteed to be the same frame where it reside before), and it will use the PFN to appropriately update the page table entry that corresponds to the virtual address for that page.
+
+<img src="demand_paging.png">
+
+At that point, control is handed back to the process that issued this reference, and the program counter of the process will be restarted with the same instruction, so that this reference will now be made again. This time the reference will succeed.
+
+If we want to require a page to be constantly present in memory, we will have to **pin the page**. This means disabling swapping. This is useful when the CPU is interacting with devices that support direct memory access, and therefore don't pass through the MMU.
+
+## Page Replacement
+
+Let's talk a little bit about the policies that determine page replacement.
+
+*When should pages be swapped out of main memory and on to disk?*
+
+When the amount of occupied memory reaches a particular threshold, the operating system will run the **page out daemon** to look for pages that can be freed.
+
+Pages should be swapped when the memory usage in the system exceeds a threshold and the CPU usage is low enough that the daemon won't disrupt the applications.
+
+*Which pages should be swapped out?*
+
+**Historic information** informs these decisions. A common algorithm to determine if a page should be swapped out is to look at how recently a page has been used, and use that to inform a prediction about the page's future use.
+
+This policy is known as **Least-Recently Used (LRU) policy**. This policy **uses the access bit** that is available on modern hardware to keep track of whether or not a page has been referenced.
+
+Other candidates for pages that can be freed from physical memory are **pages that don't need to be written out to disk**. Writing pages out to secondary storage takes time, and the OS wants to avoid this overhead. To assist in making this decision, the OS can keep track of the **dirty bit**, maintained by the MMU, which **keeps track of whether or not a page has been modified**.
+
+One last thing to keep in mind is that certain pages might be pinned. No Swappy!
+
+In Linux, a number of parameters are available to help configure the swapping nature of the system. This includes the threshold page count that determines when pages start getting swapped out. 
+
+The default replacement algorithm in Linux is a variation of LRU, which gives a second chance, meaning it performs two scans before determining which pages are the ones that should be swapped out. 
+
+## Copy On Write
