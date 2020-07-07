@@ -31,7 +31,7 @@ Finally, the need for communication and coordination illustrates the necessity o
 
 ## Message-based IPC
 
-<img src="ipc_summary.png">
+<img width="400" src="p3_l3_resources/ipc_summary.png">
 
 In message-based IPC, **processes create messages and then send and receive them**. The OS is responsible for creating and maintaining the channel that is used to send these messages.
 
@@ -45,7 +45,7 @@ One of the positives of this approach is the **relative simplicity**. The OS ker
 
 ### Forms of Message Passing - Pipes
 
-<img src="pipes.png">
+<img width="400" src="p3_l3_resources/pipes.png">
 
 Pipes are **characterized by two endpoints**, so **only two processes can communicate via a pipe**. There is no notion of a message with pipes, instead **there is a stream of bytes pushed into the pipe** from one process and read from the pipe by the other process.
 
@@ -57,7 +57,7 @@ cat /some/large/file | grep "search for something specific"
 
 ### Forms of Message Passing - Message Queues
 
-<img src="message_queues.png">
+<img width="400" src="p3_l3_resources/message_queues.png">
 
 Message queues understand the notion of messages that they can deliver. **A sending process must submit a properly formatted message to the channel, and then the channel can deliver this message to the receiving process**.
 
@@ -67,7 +67,7 @@ The use of message queues is supported via different APIs in Unix-based systems.
 
 ### Forms of Message Passing - Sockets
 
-<img src="sockets.png">
+<img width="400" src="p3_l3_resources/sockets.png">
 
 With sockets, processes send and receive messages through the socket interface. The socket API supports `send` and `recv` operations that allow processes to send message buffers in and out of the kernel-level communication barrier.
 
@@ -79,7 +79,7 @@ Socket-based communication can happen between processes on two different machine
 
 ## Shared Memory IPC
 
-<img src="shared_memory_ipc.png">
+<img width="400" src="p3_l3_resources/shared_memory_ipc.png">
 
 In shared memory IPC, processes **read and write into a shared memory region**. The **operating system is involved in establishing the shared memory channel** between the processes.
 
@@ -166,7 +166,7 @@ The keyword for this is `PTHREAD_PROCESS_SHARED`. If we specify this in the attr
 
 One very important thing to remember is that these data structures must also live in shared memory!
 
-<img src="pthread_sync_ipc.png">
+<img width="400" src="p3_l3_resources/pthread_sync_ipc.png">
 
 To create the shared memory segment, we first need to create our segment identifier. We do this with `ftok`, passing `arg[0]` which is the pathname for the program executable as well as some integer parameter. We pass this id into `shmget`, where we specify a segment size of 1kb and also pass in some flags.
 
@@ -190,7 +190,7 @@ With message queues, we can implement mutual exclusion via send/recv operations.
 
 ## IPC command line tools
 
-<img src="linux_ipc.png">
+<img width="400" src="p3_l3_resources/linux_ipc.png">
 
 ## How to think about designing IPC
 
