@@ -35,3 +35,25 @@ When a thread leaves the critical section, it signals the semaphore, which will 
 If a semaphore is initialized with a 1 - a binary semaphore - it will behave like a mutex only allowing one thread at a time to pass.
 
 ### POSIX Semaphores
+
+The POSIX semaphore API defines one type, `sem_t`, as well as three operations that manipulate that type. These operations:
+
+1. Create the semaphore.
+2. Wait on the semaphore.
+3. Unlock the semaphore.
+
+<img src="posix_semaphore.png">
+
+### Reader/Writer Locks
+
+When specifying synchronization requirements, it is sometimes useful to distinguish among different types of resources access.
+
+For instance, we commonly want to distinguish **"read" access** - those that do not modify a shared resource - from **"write" access** - those that do modify a shared resource. A read access can be shared concurrently, a write requires exclusive access.
+
+This is a common scenario, so many OSs and language runtime support a construct known as reader/writer locks.
+
+A reader/writer lock behaves similarly to a mutex, but the developer only has to specify the type of access they wish to perform (read or write), and the lock takes care of access control for them.
+
+### Using Reader/Writer Locks
+
+<img src="rwlockslinux.png">
