@@ -2,9 +2,13 @@
 
 ## Table of Contents
 
-* [Introduction](#introduction)
-* [Spinlocks](#spinlocks)
-* [Semaphores](#semaphores)
+* [Synchronization Constructs](#introduction)
+    * [Spinlocks](#spinlocks)
+    * [Semaphores](#semaphores)
+        * [Posix Semaphore API](#posix-semaphores)
+    * [Reader/Writer Locks](#reader-writer-locks)
+    * [Monitors](#monitors)
+    * [More Synchronization Constructs](#more-synchronization-constructs)
 
 ## Introduction
 
@@ -57,3 +61,29 @@ A reader/writer lock behaves similarly to a mutex, but the developer only has to
 ### Using Reader/Writer Locks
 
 <img src="rwlockslinux.png">
+
+The datatype defined in Linux is `rwlock_t` and we can perform operations on the data type. We can lock/unlock for reads and writes.
+
+Some implementations of this API differ across systems, these might be referred to as shared/exclusive locks in other APIs. It may also differ in how recursively-obtained read locks are unlocked. When unlocking a recursive read lock, some implementation unlock all of the recursive locks while other only unlock the most recently acquired lock. 
+
+### Monitors
+
+All of the constructs that we have seen so far require developers to explicitly invoke the lock/unlock and wait/signal operations. This introduces the opportunity to make errors.
+
+**Monitors** are a higher level synchronization construct that **allow us to avoid manually invoking these synchronization operations**. A monitor will specify a shared resource, the entry procedures for accessing that resource, and potential condition variables used to wake up different types of waiting threads.
+
+When invoking the entry procedure, all of the necessary locking and checking will take place by the monitor behind the scenes. When a thread is done with a shared resource and is exiting the procedure, all of the unlocking and potential signaling is again performed by the monitor behind the scenes.
+
+### More Synchronization Constructs
+
+**Serializers** make it easier to define priorities and also to hide the need for explicit signaling and explicit use of condition variables from the programmer.
+
+**Path Expressions** require the programmer to specify a regular expression that captures the correct synchronization behavior. As opposed to using locks, the programmer would specify something like "Many Reads, Single Write", and the runtime will make sure that the operations satisfy the regular expressions.
+
+**Barriers** are like reverse semaphores. While a semaphore allows n threads to process before it blocks, a barrier blocks until n threads arrive a barrier point. Similarly, rendezvous points also wait for multiple threads to arrive at a particular point of execution.
+
+To further boost scalability and efficiency metrics, there are efforts to achieve concurrency without explicitly locking and waiting. These **wait-free synchronization** constructs are optimistic in the sense that they bet on the fact that there wont be any concurrent writes and that it is safe to allow reads to proceed concurrently. An example of this is **read-copy-update(RCU) lock** that is part of the Linux kernel.
+
+All of these methods require support from the underlying hardware to atomically make updates to a memory location. This is the only way that they can guarantee that a lock is properly acquired and that protected state changes are performed in a safe, race-free way.
+
+### The Performance of Spin Lock Alternatives for Shared Memory Multiprocessors
