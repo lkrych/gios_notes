@@ -154,3 +154,28 @@ A final alternative is to apply the write immediately to the cache, and perform 
 ### Cache Coherence
 
 So what happens when multiple CPUs reference the same data?
+
+<img src="cache_coherence.png"/>
+
+On some architectures, this problem needs to be dealt with completely in software. Otherwise, the caches will be incoherent. For instance, if one CPU writes a new version of X to its cache, the hardware will not update the value across the other CPU caches. These architectures are called **non-cache-coherent (NCC) architectures**.
+
+On **cache-coherent (CC) architectures**, the hardware will take care of all the necessary steps to ensure that the caches are coherent. If one CPU writes a new version of X to its cache, the hardware will step in and ensure that the value is updated across CPU caches.
+
+There are two basic strategies by which hardware can achieve cache coherence.
+
+Hardware using the **write-invalidate (WI)** strategy will **invalidate all cache entries of X once one CPU updates its copy of X**. Future references to invalidate cache entries will have to pass through main memory before being re-cached.
+
+Hardware using the **write-update (WU)** strategy will **ensure that all cache entries of X are updated once one CPU updates its copy of X**. Subsequent accesses of X by any of the CPUs will continue to be served by the cache.
+
+With **write-invalidate, we pose lower bandwidth requirements on the shared interconnect** in the system. Why? We don't have to send the value of X, but rather just its address so it can be invalidated. 
+
+If X isn't needed on any other CPUs anytime soon, it is possible to amortize the cost of coherence traffic over multiple changes. X can change multiple times on one CPU before its value is needed on another CPU.
+
+For **write-update architectures, the benefit is that X will be available immediately on the other CPUs that need to access it**. We will not have to pay the cost of a main memory access. Programs that will need to access the new value of X immediately on another CPU will benefit from the design.
+
+The user of write-update or write-invalidate is determined by the hardware supporting your platform. The software engineer has no say :p. 
+
+
+
+
+
