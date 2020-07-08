@@ -9,6 +9,7 @@
     * [Reader/Writer Locks](#reader-writer-locks)
     * [Monitors](#monitors)
     * [More Synchronization Constructs](#more-synchronization-constructs)
+* [Discussion: The Performance of Spin Lock Alternatives for Shared Memory Multiprocessors](#the-performance-of-spin-lock-alternatives-for-shared-memory-multiprocessors)
 
 ## Introduction
 
