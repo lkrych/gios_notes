@@ -88,3 +88,69 @@ To further boost scalability and efficiency metrics, there are efforts to achiev
 All of these methods require support from the underlying hardware to atomically make updates to a memory location. This is the only way that they can guarantee that a lock is properly acquired and that protected state changes are performed in a safe, race-free way.
 
 ### The Performance of Spin Lock Alternatives for Shared Memory Multiprocessors
+
+Checking and setting a lock value needs to happen **atomically** so that we can guarantee that only one thread at a time can successfully obtain the lock.
+
+Let's look at the implementation of our spin lock:
+
+```c
+spinlock_lock(lock) {
+    while(lock == busy) {
+        //spin
+    }
+    lock = busy
+}
+```
+
+The problem with this implementation is that it takes multiple cycles to perform the check and the set and during these cycles threads can be interleaved in arbitrary ways.
+
+To make this work we need **hardware-supported atomic instructions**.
+
+### Atomic Instructions
+
+Each type of hardware will support a number of atomic instructions. Some examples include:
+* test_and_set
+* read_and_increment
+* compare_and_swap
+
+Each of these operations performs some multi-step, multi-cycle operation. Because they are atomic instructions however, t**he hardware makes some guarantees**. 
+
+First, these operations will happen **atomically**, that is, **completely or not at all**. In addition, the **hardware guarantees mutual exclusion** -- threads on multiple cores cannot perform the atomic operations in parallel. **All concurrent attempts to execute an instruction will be queued and performed serially**.
+
+Here is a new implementation for a spinlock locking operation which uses an atomic instruction.
+
+```c
+spinlock_lock(lock) {
+    while(test_and_set(lock) == busy);
+}
+```
+
+When the first thread arrives, `test_and_set` looks at the value that `lock` points to. This value will initially be set to zero. `test_and_set` atomically sets the value to one, and returns to zero. `busy` is equal to one. Thus, the first thread can proceed. When subsequent threads arrive, `test_and_set` will look at the value, these threads will spin.
+
+Which specific atomic instructions are available on a given platform varies from hardware to hardware. There may be differences in the efficiencies with which different atomic operations execute on different architectures. For this reason, **software built with specific atomic instructions needs to be ported**; that is, we need to make sure the implementation uses one of the atomic instructions available on the target platform
+
+### Shared Memory Multiprocessors
+
+<img src="shared_memory_multip.png">
+
+In the interconnect-based configuration (on the right), multiple memory references can be in-flight at a given moment, one to each connected memory module. In a bus-based configuration, the shared bas can only support one memory-reference at a time.
+
+Shared memory multiprocessors are also referred to as symmetric multiprocessors(SMP).
+
+Each of the CPUs in a SMP platform will have a cache.
+
+<img src="smp_cache.png">
+
+In general, **access to the cache data is faster than access to data in main memory**. Put another way, cache hides memory latency. **This latency is even more pronounced in shared memory systems because there may be contention among different CPUs for the shared memory components.** This contention will cause memory accesses to be delayed, making cached lookups appear much faster.
+
+When CPUs perform a write, many things can happen.
+
+For example, we may not even allow a CPU to write to its cache. A write will go directly to main memory, and any cache references will be invalidated. This is called **no-write**.
+
+As one alternative, the CPU write may be applied both to the cache and in memory. This is called **write-through**.
+
+A final alternative is to apply the write immediately to the cache, and perform the write in main memory at some later point in time, perhaps when the cache entry is evicted. This is called **write-back**.
+
+### Cache Coherence
+
+So what happens when multiple CPUs reference the same data?
