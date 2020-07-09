@@ -173,9 +173,52 @@ If X isn't needed on any other CPUs anytime soon, it is possible to amortize the
 
 For **write-update architectures, the benefit is that X will be available immediately on the other CPUs that need to access it**. We will not have to pay the cost of a main memory access. Programs that will need to access the new value of X immediately on another CPU will benefit from the design.
 
-The user of write-update or write-invalidate is determined by the hardware supporting your platform. The software engineer has no say :p. 
+The user of write-update or write-invalidate is determined by the hardware supporting your platform. The software engineer has no say :p.
 
+### Cache Coherence and Atomics
 
+Let's consider a scenario where we have two CPUs. Each CPU needs to perform an atomic operation concerning X, and body CPUs have a reference to X present in their cache.
 
+When an atomic instruction is performed against the cached value of X on one CPU, it is really challenging to know whether or not an atomic instruction will be attempted on the value of X on another CPU. We obviously do not want to have incoherent cache references because that would affect the correctness of our applications.
 
+To address this, **atomic operations always bypass the caches and are issued directly to the memory location** where the particular target is stored. 
 
+By forcing atomic operations to go directly to the memory controller, we enforce a central entry point where all the references can be ordered and synchronized in a unique manner. None of the race conditions that could have occurred had we let atomic instructions update the cache can occur now. 
+
+That being said, **atomic instructions take much longer than other types of instructions since they can never leverage the cache**. 
+
+In addition, in order to guarantee atomic behavior, we have to generate the coherence traffic to either update or invalidate all of the cached references to X, regardless of whether it has changed. 
+
+In summary, atomic instructions on SMP systems are more expensive than on single CPU system because of bus or I/C contention. In addition, atomics in general are more expensive because they bypass the cache and always trigger coherence traffic.
+
+## Spinlock Performance Metrics
+
+We want spinlocks to have low latency, we can **define latency as the time it takes a thread to acquire a free lock**. Ideally, we want the thread to be able to acquire a free lock immediately with a single atomic instruction.
+
+In addition, we want the spinlock to have low delay/waiting time. We can define delay as **the amount of time required for a thread to stop spinning and acquire a lock that has been freed**. 
+
+Lastly, we would like a design that reduces contention on the shared bus or interconnect. Specifically, contention due to the actual atomic memory references as well as the subsequent coherence traffic. 
+
+## Test and Set Spinlock
+
+<img src="spinlock_api.png">
+
+The `test_and_set` instruction is a very common atomic that most hardware platforms support. 
+
+From a latency perspective, this spinlock is as good as it gets. We only execute on atomic operation and there is no way we can do better than this.
+
+Regarding delay, this implementation performs well. We are spinning on the atomic. As soon as the lock becomes free, th every next call to test_and_set which is the next instruction, will immediately detect the free lock and acquire it.
+
+From a contention perspective this lock does not perform well. As long as the threads are spinning on `test_and_set`, the processor has to continuously go to main memory on each instruction. This will delay all other CPUs that need to access memory.
+
+The real problem with this implementation is that we are continuously spinning on the atomic instruction. Regardless of cache coherence, we are forced to constantly waste time going to memory every time we execute the atomic instruction.
+
+## Test and Test and Set Spinlock
+
+The problem with the previous implementation is that all of the CPUs are spinning on the atomic operation. **Let's try to separate the test part - checking the value of the lock - from the atomic**. 
+
+The intuition is that CPUs can potentially test their cached copy of the lock and only execute the atomic if it detects that its cached copy has changed. 
+
+Here is the resulting lock operation:
+
+<img src="test_and_test_and_set.png">
