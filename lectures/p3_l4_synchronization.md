@@ -53,7 +53,7 @@ The POSIX semaphore API defines one type, `sem_t`, as well as three operations t
 2. Wait on the semaphore.
 3. Unlock the semaphore.
 
-<img src="posix_semaphore.png">
+<img src="p3_l4_resources/posix_semaphore.png">
 
 ### Reader/Writer Locks
 
@@ -67,7 +67,7 @@ A reader/writer lock behaves similarly to a mutex, but the developer only has to
 
 ### Using Reader/Writer Locks
 
-<img src="rwlockslinux.png">
+<img src="p3_l4_resources/rwlockslinux.png">
 
 The datatype defined in Linux is `rwlock_t` and we can perform operations on the data type. We can lock/unlock for reads and writes.
 
@@ -137,7 +137,7 @@ Which specific atomic instructions are available on a given platform varies from
 
 ### Shared Memory Multiprocessors
 
-<img src="shared_memory_multip.png">
+<img src="p3_l4_resources/shared_memory_multip.png">
 
 In the interconnect-based configuration (on the right), multiple memory references can be in-flight at a given moment, one to each connected memory module. In a bus-based configuration, the shared bas can only support one memory-reference at a time.
 
@@ -145,7 +145,7 @@ Shared memory multiprocessors are also referred to as symmetric multiprocessors(
 
 Each of the CPUs in a SMP platform will have a cache.
 
-<img src="smp_cache.png">
+<img src="p3_l4_resources/smp_cache.png">
 
 In general, **access to the cache data is faster than access to data in main memory**. Put another way, cache hides memory latency. **This latency is even more pronounced in shared memory systems because there may be contention among different CPUs for the shared memory components.** This contention will cause memory accesses to be delayed, making cached lookups appear much faster.
 
@@ -161,7 +161,7 @@ A final alternative is to apply the write immediately to the cache, and perform 
 
 So what happens when multiple CPUs reference the same data?
 
-<img src="cache_coherence.png"/>
+<img src="p3_l4_resources/cache_coherence.png"/>
 
 On some architectures, this problem needs to be dealt with completely in software. Otherwise, the caches will be incoherent. For instance, if one CPU writes a new version of X to its cache, the hardware will not update the value across the other CPU caches. These architectures are called **non-cache-coherent (NCC) architectures**.
 
@@ -207,7 +207,7 @@ Lastly, we would like a design that reduces contention on the shared bus or inte
 
 ## Test and Set Spinlock
 
-<img src="spinlock_api.png">
+<img src="p3_l4_resources/spinlock_api.png">
 
 The `test_and_set` instruction is a very common atomic that most hardware platforms support. 
 
@@ -227,7 +227,7 @@ The intuition is that CPUs can potentially test their cached copy of the lock an
 
 Here is the resulting lock operation:
 
-<img src="test_and_test_and_set.png">
+<img src="p3_l4_resources/test_and_test_and_set.png">
 
 First we check if the lock is busy. Importantly, this check is performed against the cached value. As long as the lock is busy, we will stay in the while loop and we won't need to evaluate the second part of the predicate. Only when the lock becomes free - when `lock == busy` evaluates to false, do we actually execute the atomic.
 
@@ -251,7 +251,7 @@ However, write-invalidate will invalidate the cached copy. Even if the value has
 
 ## Spinlock Delay Alternatives
 
-<img src="spinlock_delay.png">
+<img src="p3_l4_resources/spinlock_delay.png">
 
 This implementation introduces a delay every time the thread notices that the lock is free.
 
@@ -293,7 +293,7 @@ Alternatively, if we can prevent every thread from seeing that the lock has been
 
 The **lock that controls which threads see that the lock is free at which time is the queuing lock**.
 
-<img src="queueing_lock.png">
+<img src="p3_l4_resources/queueing_lock.png">
 
 THe queueing lock uses an array of flags with up to `n` elements, where `n` is the number of threads in the system. Each element in the array will have one of two values: either `has_lock` or `must_wait`. In addition, one pointer will indicate the current lock holder (will have `has_lock`), and another pointer will reference the last element on the queue.
 
@@ -311,7 +311,7 @@ In addition, this lock requires much more space than the other locks. All other 
 
 ## Queueing Lock Implementation
 
-<img src="queueing_lock_implementation.png">
+<img src="p3_l4_resources/queueing_lock_implementation.png">
 
 The atomic operation involves the variable `queuelast`, but the rest of the locking code doesn't involve that variable. Any invalidation traffic concerned with cached values of `queuelock` aren't going to concern the spinning that occurs on any of the elements in the flags array.
 
@@ -325,7 +325,7 @@ In order to realize these gains, we need a cache coherent architecture. Otherwis
 
 ## Spinlock Performance Comparisons
 
-<img src="spinlock_performance.png">
+<img src="p3_l4_resources/spinlock_performance.png">
 
 This figures shows measurements that were gathered from executing a program that had multiple processes. Each process executed a critical section in a loop, one million times. The number of processes in the system was varied such that there was only one process per processor.
 
