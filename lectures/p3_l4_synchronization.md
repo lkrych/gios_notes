@@ -6,10 +6,16 @@
     * [Spinlocks](#spinlocks)
     * [Semaphores](#semaphores)
         * [Posix Semaphore API](#posix-semaphores)
-    * [Reader/Writer Locks](#reader-writer-locks)
+    * [Reader/Writer Locks](#readerwriter-locks)
     * [Monitors](#monitors)
     * [More Synchronization Constructs](#more-synchronization-constructs)
 * [Discussion: The Performance of Spin Lock Alternatives for Shared Memory Multiprocessors](#the-performance-of-spin-lock-alternatives-for-shared-memory-multiprocessors)
+    * [Test and Set Spinlock](#test-and-set-spinlock)
+    * [Test and Test and Set Spinlock](#test-and-test-and-set-spinlock)
+    * [Spinlock Delay Alternatives](#spinlock-delay-alternatives)
+    * [Picking a Delay](#picking-a-delay)
+    * [Queueing Lock](#queueing-lock)
+    * [Performance Comparison](#spinlock-performance-comparisons)
 
 ## Introduction
 
@@ -243,7 +249,7 @@ If we have a write-update situation, that coherence traffic will update the valu
 
 However, write-invalidate will invalidate the cached copy. Even if the value hasn't changed, the invalidation will force the CPU to go to main memory to execute the atomic. What this means is that any time another CPU executes an atomic, all of the other CPUs will be invalidated and will have to go to memory.
 
-## Spinlock "Delay" Alternatives
+## Spinlock Delay Alternatives
 
 <img src="spinlock_delay.png">
 
