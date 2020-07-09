@@ -222,3 +222,88 @@ The intuition is that CPUs can potentially test their cached copy of the lock an
 Here is the resulting lock operation:
 
 <img src="test_and_test_and_set.png">
+
+First we check if the lock is busy. Importantly, this check is performed against the cached value. As long as the lock is busy, we will stay in the while loop and we won't need to evaluate the second part of the predicate. Only when the lock becomes free - when `lock == busy` evaluates to false, do we actually execute the atomic.
+
+This spinlock is referred to as the **test-and-test-and-set spinlock**. It is also called a spin-on-read or spin-on-cached-value spinlock.
+
+From a latency and delay standpoint it is okay. It is slightly worse than the test-and-set spinlock because we have to perform an extra step.
+
+From a contention standpoint our performance varies.
+
+If we don't have a cache coherent architecture, there is no difference in contention. Every single reference will go to memory.
+
+If we have a cache coherence with the write-update strategy the contention improves. The only problem with write-update is that all the processors will see the values of the lock as free and thus all of them will try to unlock the lock at once.
+
+If we have cache coherence with the write-invalidate strategy, our contention is terrible. Every single attempt to acquire the lock will generate contention for the memory module and will also create invalidation traffic.
+
+One outcome of executing an atomic instruction is that e will trigger the cache coherence strategy regardless of whether or not the value protected by the atomic changes.
+
+If we have a write-update situation, that coherence traffic will update the value of the other caches with the new value of the lock. If the lock was busy before the write-update event, and the lock remains busy after the write-update event, there is no problem. The CPU can keep spinning on the cached copy.
+
+However, write-invalidate will invalidate the cached copy. Even if the value hasn't changed, the invalidation will force the CPU to go to main memory to execute the atomic. What this means is that any time another CPU executes an atomic, all of the other CPUs will be invalidated and will have to go to memory.
+
+## Spinlock "Delay" Alternatives
+
+<img src="spinlock_delay.png">
+
+This implementation introduces a delay every time the thread notices that the lock is free.
+
+The rationale behind this is to **prevent every thread from executing the atomic instruction at the same time**. 
+
+As a result, the contention in the system will be improved. When the delay expires, the delayed thread will re-check the value of the lock, and it's possible that another thread executed the atomic and the delayed thread will see the lock is busy. If the lock is free, the delayed thread will execute the atomic.
+
+There will be fewer cases in which threads see a busy lock as free and try to execute an atomic that will not be successful.
+
+From a latency perspective, this solution is okay. We still have to perform a memory reference to bring the lock into the cache, and then another to perform the atomic. However, this isn't too different from the test-and-test-and-set.
+
+From a delay perspective, the performance has decreased. Once a thread sees that a lock is free, we have to delay for some amount of time. If there is no contention for the lock, that delay is wasted time.
+
+An alternative delay-based lock introduces a delay after each memory reference.
+
+The main benefit of this is that it works on NCC architectures. Since a thread has to go to main memory on every reference on NCC architectures, introducing an artificial delay greatly increases the number of references the thread has to perform while spinning.
+
+Unfortunately, this alternative will hurt the delay much more, because the thread will delay every time the lock is referenced, not just when the thread detects the lock has become free.
+
+## Picking a Delay
+
+One strategy is to pick a **static delay**, which is based on some fixed information. One benefit of this approach is the simplicity and the fact that under high load, static delays **will likely spread out all the atomic references such that there is little contention**.
+
+The problem with it is that **it will create unnecessary load under low contention**. 
+
+To avoid the issues of excessive delays without contention, **dynamic delays** can be used. With dynamic delays, each thread will take a random delay value form a range of possible values that increase with the perceived contention in the system.
+
+Under high load, both dynamic and static delays will be sufficiently enough to reduce contention within the system.
+
+How is contention evaluated? A good metric is to track the number of failed `test_and_set` operations. The more these operations fail, the more likely it is that there is a higher degree of contention.
+
+If we delay after each lock reference, however, our delay grows not only as a function of contention but also as a function of the length of the critical section. If a thread is executing a large critical section, all spinning threads will be increasing their delays even though the contention in the system hasn't actually increased.
+
+## Queueing Lock
+
+The reason for introducing a delay is to guard against the case where every thread tries to acquire a lock once it is freed.
+
+Alternatively, if we can prevent every thread from seeing that the lock has been freed at the same time, we can indirectly prevent the case of all threads rushing to acquire the lock simultaneously.
+
+The **lock that controls which threads see that the lock is free at which time is the queuing lock**.
+
+<img src="queueing_lock.png">
+
+THe queueing lock uses an array of flags with up to `n` elements, where `n` is the number of threads in the system. Each element in the array will have one of two values: either `has_lock` or `must_wait`. In addition, one pointer will indicate the current lock holder (will have `has_lock`), and another pointer will reference the last element on the queue.
+
+When a new thread arrives at the lock, it will receive a ticket, which corresponds to the current position of the thread in the lock. This will be done gby adding it after the existing last element in the queue.
+
+Since multiple threads may enter the lock at the same time, it's important to increment the queuelast pointer atomically. This requires some support for the `read_and_increment` atomic.
+
+For each thread arriving at the lock, the assigned element of the flags array at the ticket index acts like a private lock. As long as this value is `must_wait`, the thread will have to spin.  When the value of the element becomes `has_lcok`, this will signify to the threads that the lock is free and they can attempt to enter their critical section.
+
+When a thread completes a critical section and needs to release the lock, it needs to signal the next thread. Thus `queue[ticket + 1] = has_lock`.
+
+This strategy has two drawbacks. First, it requires support for the `read_and_increment` atomic, which is less common than `test_and_set`.
+
+In addition, this lock requires much more space than the other locks. All other locks require a single memory location to track the value of the lock. This lock requires `n` such locations, one for each thread.
+
+## Queueing Lock Implementation
+
+<img src="queueing_lock_implementation.png">
+
