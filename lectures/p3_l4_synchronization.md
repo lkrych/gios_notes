@@ -307,3 +307,32 @@ In addition, this lock requires much more space than the other locks. All other 
 
 <img src="queueing_lock_implementation.png">
 
+The atomic operation involves the variable `queuelast`, but the rest of the locking code doesn't involve that variable. Any invalidation traffic concerned with cached values of `queuelock` aren't going to concern the spinning that occurs on any of the elements in the flags array.
+
+From a latency perspective, this lock is not very efficient. It performs a complex atomic operation, `read_and_increment`, which takes more cycles than a standard `test_and_set`.
+
+From a delay perspective, this lock is good. Each lock holder directly signals the next element in the queue that the lock has been freed.
+
+From a contention perspective, this lock is much better than any lock we have discussed since the atomic is only executed once up front and is not part of the spinning code. The atomic operation in the spinning code in separate variables, so cache invalidation on the atomic variable doesn't impact spinning.
+
+In order to realize these gains, we need a cache coherent architecture. Otherwise, spinning must involve remote memory references. In addition, we have to make sure that every element is on a different cache line. Otherwise, we can change the value of one element in the array,  we will invalidate the entire cache line, so the processors spinning on other elements will have their caches invalidated.
+
+## Spinlock Performance Comparisons
+
+<img src="spinlock_performance.png">
+
+This figures shows measurements that were gathered from executing a program that had multiple processes. Each process executed a critical section in a loop, one million times. The number of processes in the system was varied such that there was only one process per processor.
+
+The platform that was used was Sequent Symmetry, which has twenty processors, which explains why the number of processors on the graph is capped at 20. This platform is cache coherent with write-invalidate.
+
+The metric that was computed was the overhead, which was measured in comparison to a case of ideal performance, which corresponded to the theoretical limit - assuming no delay or contention - of how long it would take to execute the number of critical sections. The measured difference between the theoretical limit and the observed execution time was the overhead.
+
+Under high load, the queueing lock performs the best. It is the most scalable; as we add more processors, the overhead does not increase.
+
+The test_and_test_and_set lock performs the worst under load. The platform is cache coherent with write-invalidate, and we discussed earlier how this strategy forces O(N^2) memory references to maintain cache coherence.
+
+Of the delay-based alternatives, the static locks are a little better than the dynamic locks, since dynamic locks have some measure of randomness and will have more collisions than static locks. Also, delaying after every reference is slightly better than delaying after every lock release.
+
+Under smaller loads, test_and_test_and_set performs pretty well: it has low latency. We can also see that the dynamic delay alternatives perform better than the static ones. Static delay locks can naively enforce unnecessarily large delays under small loads, while dynamic alternatives adjust based on contention.
+
+Under light loads, the queueing lock performs the worst. This is because of the higher latency inherent to the queueing lock, in the form of the more complex atomic, read_and_increment, as well as some additional computation that is required at lock time.
