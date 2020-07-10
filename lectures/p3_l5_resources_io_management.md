@@ -2,6 +2,26 @@
 
 ## Table of Contents
 
+* [I/O Devices](#io-devices)
+    * [I/O Devices Features](#io-device-features)
+    * [CPU/Device Interconnect](#cpudevice-interconnect)
+    * [Device Drivers](#device-drivers)
+    * [Types of Devices](#types-of-devices)
+    * [CPU/Device Interactions](#cpudevice-interactions)
+    * [Device Access PIO](#device-access-pio)
+    * [Device Access DMA](#device-access-dma)
+    * [Typical Devices Access](#typical-device-access)
+    * [OS Bypass](#os-bypass)
+    * [Sync vs Async Access](#sync-vs-async-access)
+    * [Block Device Stack](#block-device-stack)
+* [Virtual File System](#virtual-file-system)
+    * [Virtual File System Abstractions](#vfs-abstractions)
+    * [VFS on Disk](#vfs-on-disk)
+    * [ext2](#ext2-second-extended-filesystem)
+    * [Inodes](#inodes)
+    * [Inodes with Indirect Pointers](#inodes-with-indirect-pointers)
+    * [Disk Access Optimizations](#disk-access-optimizations)
+
 ## I/O Devices
 
 The execution of applications doesn't rely on only the CPU and memory, but other hardware components as well. Some of these components are specifically tied to receiving inputs or directing outputs and these devices are referred to as **I/O devices**. 
@@ -202,7 +222,7 @@ Other than dentries, the remaining components of the filesystem will correspond 
 
 To make sense of all of this - which blocks hold data, which blocks hold inodes, and which blocks are free. The superblock maintains an overall map of the disks on a particular device. This map is used for both allocation and lookup.
 
-## Linux - ext2 - Second Extended Filesystem
+## ext2 (Second Extended Filesystem)
 
 The ext2 filesystem was the default filesystem in Linux until it was replaced by ext3 and ext4 more recently.
 
