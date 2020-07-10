@@ -265,3 +265,15 @@ The benefits of indirect pointers is that it allows us to use relatively small i
 The downside of indirect pointers is that file access is slowed down. Without any indirect pointers, we have at most two disk accesses to get a block of content, one access for the inode, one access for the block. With double indirect pointers, we double the number of accesses: inode, block and two pointers.
 
 ## Disk Access Optimizations
+
+Filesystems use several techniques to try and minimize access to disk and improve file access overhead. 
+
+For example, filesystems rely on **buffer caches** in main memory to reduce the number of disk accesses. Content will be written to and read from these caches, and periodically will be **flushed** to disk. Filesystems support this operation via the `fsync` system call.
+
+Another component that helps reduce the file access overhead is I/O scheduling. A main goal of **I/O scheduling** is to **reduce the disk head movement**, which is a slow operation. I/O schedulers can achieve this by **maximizing sequential accesses over random accesses**. 
+
+Another useful technique is **prefetching**. Since there is often a lot of locality to how a file is accessed, **cache hits can be increased by fetching nearby blocks during a request**. 
+
+This uses more disk bandwidth, but it can significantly reduce the access latency by increasing the cache hit rate.
+
+A final useful technique is **journaling**. I/O scheduling reduces random access, but it still keeps the data in memory. As opposed to writing out the data in the proper disk location, which would require a lot of random disk access. In journaling we write updates to a log. The log will contain some description of the write that needs to take place, such as the block, the offset, and the content to be written. THe writes described in the log are periodically applied to proper disk locations.
