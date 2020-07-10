@@ -110,3 +110,34 @@ If we have a 1500B packet that we wish to transmit using 8 byte data registers, 
 DMA configuration is not trivial. It takes more cycles than a memory access. For smaller transfers, PIO is more efficient.
 
 In order for DMA to work, the data buffer must be in physical memory until the transfer completes. It cannot be swapped out to disk since the DMA controller only has access to physical memory. This means that **the memory regions involved in DMA are pinned**.
+
+## Typical Device Access
+
+When **a user process needs to perform an operation that requires a device, the process will make a system call** specifying the appropriate operation.
+
+The OS will then run the in-kernel stack associated with the specific device, and may perform some preprocessing to prepare the data received by the user process for the device. For example, the kernel may form a TCP/IP packet from an unformatted buffer.
+
+Then the OS will invoke the appropriate device driver for the device. The device driver will then perform the configuration of the request to the device. For example, a device driver to a network interface card will write a record that configures the device to perform a transmission of the packet sent from the OS.
+
+The device driver issues commands and sends data using the appropriate PIO or DMA operations. The drivers are responsible for ensuring that any commands and data needed by the device are not overwritten or undelivered.
+
+Finally, once the device is configured, the device will perform the actual request. For example, a NIC will actually transmit the packet onto the network.
+
+Any results/events originating on the device will traverse this chain in reverse: from the device to the driver to the kernel and finally back to the user process.
+
+<img src="user_to_device.png">
+
+## OS Bypass
+
+It is not necessary to go through the kernel to get to a device. It is possible to configure some devices to be accessible directly from the user level. This is called **operating system bypass**. In OS bypass, any memory/registers assigned for use by the device is directly available to the user process.
+
+The OS is involved in making the device registers available to the user process on create, but then it is out of the way.
+
+Since we don't want to interact with the kernel in order to control the device, we need a **user-level driver/library**, that the process links in order to interact with the device. These libraries are usually provided by the manufacturers.
+
+**The OS has to retain some coarse-grain control**. For example, the OS can still enable/disable a device or add permissions to add more processes to use the device. The device must have enough registers so that the OS can map some of them into one or more user processes while still retaining access to a few registers itself so it can interact with the device at a higher level.
+
+When the device needs to pass some data to one of the processes interacting with it, the device must figure out which process the data belongs to. The device must perform some protocol functionality in order to demultiplex multiple chunks of data that belong to different processes. Normally, the kernel performs the demultiplexing, but in OS bypass that responsibility is left to the device. 
+
+## Sync vs Async Access
+
