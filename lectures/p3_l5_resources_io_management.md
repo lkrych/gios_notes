@@ -203,3 +203,39 @@ Other than dentries, the remaining components of the filesystem will correspond 
 To make sense of all of this - which blocks hold data, which blocks hold inodes, and which blocks are free. The superblock maintains an overall map of the disks on a particular device. This map is used for both allocation and lookup.
 
 ## Linux - ext2 - Second Extended Filesystem
+
+The ext2 filesystem was the default filesystem in Linux until it was replaced by ext3 and ext4 more recently.
+
+A disk partition that is used in ext2 looks as follows: 
+
+<img src="ext2.png">
+
+The first block is not used by Linux and is often used to boot the system.
+
+**The rest of the partition is divided into block groups.** The size of these block groups have no correlation to the physics of the actual disks these groups abstract.
+
+Each block group contains several blocks.
+
+The first block is the superblock, which contains information about the overall block group:
+1. the number of inodes
+2. the number of disk blocks
+3. the start of the free blocks
+
+The overall state of the block group is further described by the **group descriptor**, which contains information about:
+1. bitmaps
+2. number of free nodes
+3. number of directories
+
+**Bitmaps** are used to **quickly find free blocks and inodes**. Higher level allocators can read the bitmaps to easily determine which blocks and inodes are free and which are in use. 
+
+The inodes are numbered from 1 to some maximum value. **Every inode in ext2 is a 128B data structure that describes exactly one file**. The inode will **contain information about file ownership as well as some pointers to the actual data blocks that hold data**. 
+
+Finally, the block group contains the actual data blocks themselves that hold the data. 
+
+## Inodes
+
+Inodes play a key role in organizing how files are stored on disk because they are the index of all the disk blocks that correspond to a specific file.
+
+<img src="inode.png">
+
+A FILE
