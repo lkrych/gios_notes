@@ -141,3 +141,65 @@ When the device needs to pass some data to one of the processes interacting with
 
 ## Sync vs Async Access
 
+<img src="sync_v_async.png">
+
+When an I/O request is made, the user process typically requires some response from the device, even if it is just an acknowledgement.
+
+**What happens to a user thread once an I/O request is made depends on whether the request was synchronous or asynchronous**.
+
+For **synchronous operations, the calling thread will block**. The OS kernel will place the thread on the corresponding wait queue associated with the device, and the thread will eventually become runnable again when the response to its request becomes available.
+
+With **asynchronous operations, the thread is allowed to continue execution** as soon as it issues the request. At some later time, the user process can be allowed to check if the response is available. Alternatively, the kernel can notify the process that the operation is complete and that the results are available.
+
+
+## Block Device Stack
+
+**Block devices**, like disks are typically **used for storage**. The typical **storage related abstraction** used by applications is the **file**. A file is **a logical storage unit which maps to some underlying physical storage location**. At the level of the user process we don't think about interacting with blocks of storage, we think about interacting with files.
+
+**Below the file-based interface used by applications is the filesystem**. The file system will receive read/write operations form a user process for a given file, and will have the information to find the file, determine if the user process can access it and which portion to access.
+
+OS's allow for a filesystem to be modified or completely replaced with a different filesystem. To make this easy, **OS's standardize the filesystem interface** that is exposed to a user process. The standardized API is the POSIX API, which includes the system calls for read and write. The result is that **filesystems can be swapped out without breaking** user applications.
+
+If the files are stored on block devices, the filesystem will need to interact with these devices via their device drivers. Different types of block devices can be used for the physical storage and the actual interaction with them will require certain protocol-specific APIs. There are often differences among the APIs :(.
+
+In order to **mask these device-specific differences**, the block device stack introduces another layer: the **generic block layer**. The intent of this layer is to provide a standard for a particular operating system to all types of block devices. The full device features are still available and accessible through the device driver, but are abstracted away from the filesystem itself.
+
+Thus, in the same way that the filesystem provides a consistent file API to user processes, the OS provides a consistent block API to the filesystem. 
+
+## Virtual File System
+
+It would be nice if:
+
+1. A user application could see files across multiple devices as a single filesystem.
+2. Files could be presented that aren't even local to the machine.
+3. Manufacturers didn't create devices that preferred specific filesystems.
+
+To solve these underlying problems, OS's like Linux include a **virtual filesystem (VFS)** layer. This layer hides all details regarding the underlying filesystem(s) from the higher level customers.
+
+<img src="vfs.png">
+
+Applications continue to interact with the VFS using the same POSIX API as before, and the VFS specifies a more detailed set of filesystem-related abstractions that every single underlying filesystem must implement.
+
+## VFS Abstractions
+
+The **file** abstraction represents the elements on which a VFS operates.
+
+The OS abstracts files via **file descriptors**. A file descriptor is an integer that is created when a file is first opened. There are many operations that can be supported on files using a file descriptor, such as `read`, `write`, and `close`.
+
+For each file, the VFS maintains a **persistent data structure** called an **inode**. The inode maintains a list of all the data blocks corresponding to the file. In this way, the inode is the "index node" for a file. The **inode also contains** other information for that file, like **permissions associated with the file, the size of the file, and other metadata**. Inodes are important because files do not need to be stored contiguously on disk. The inode will keep track of where they are.
+
+To help with certain operations on directories, Linux maintains a data structure called a **dentry**(directory entry). Each dentry object corresponds to a single path component that is being traversed as we are trying to reach a particular file. For example, if we are trying to access a file `/users/byron`, the filesystem will create a dentry for every path component: `/`, `/users`, and `/users/byron`.
+
+This is useful because when we need to find another file in `/users/byron`, we don't need to go through the entire path and re-read the files that correspond to all of the directories in order to get to the right directory. The filesystem will maintain a **dentry cache** containing all of the directories that we have previously visited. Note that dentry objects live only in memory, they are not persisted.
+
+The **superblock abstraction** provides information about **how a particular filesystem is laid out on some storage device**. The data structure maintains a map that the filesystem uses so it can figure out how it has organized the persistent data elements like inodes and the data blocks that belong to different files. 
+
+## VFS on Disk
+
+The **VFS data structures are software entities**. They are created and maintained by the OS filesystem component.
+
+Other than dentries, the remaining components of the filesystem will correspond to blocks that are present on disk. The files are written to disk as block. The inodes - which track all the blocks of a file - are persisted as well in a block.
+
+To make sense of all of this - which blocks hold data, which blocks hold inodes, and which blocks are free. The superblock maintains an overall map of the disks on a particular device. This map is used for both allocation and lookup.
+
+## Linux - ext2 - Second Extended Filesystem
