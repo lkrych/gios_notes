@@ -37,7 +37,7 @@ In general, a device will have **a set of control registers which can be accesse
 2. **Data Registers** - Used by the CPU to transfer data in and out of the device.
 3. **Status Registers** - Used by the CPU to understand what is happening in the device.
 
-<img src="io_device.png">
+<img src="p3_l5_resources/io_device.png">
 
 Internally, the device will incorporate all other device-specific logic. This include the **microcontroller**, which is the devices CPU, on-device memory, as well as any other logic needed by the device (Some devices need chips for converting analog to digital signals, network devices need chips to interact with the physical network medium).
 
@@ -45,7 +45,7 @@ Internally, the device will incorporate all other device-specific logic. This in
 
 **Devices interface with the rest of the system via a controller** that is typically integrated as part o the device packaging. It is used to connect the device with the rest of the CPU complex via a CPU/Device interconnect.
 
-<img src="pci_bus.png">
+<img src="p3_l5_resources/pci_bus.png">
 
 In this figure, all of the controllers are connected to the rest of the system via a **Peripheral Component Interconnect (PCI)** bus. 
 
@@ -59,7 +59,7 @@ The **device controllers determine what type of interconnect a device can attach
 
 Operating systems support devices via **device drivers**. 
 
-<img src="device_drivers.png">
+<img src="p3_l5_resources/device_drivers.png">
 
 Device drivers are **device-specific software components**. The operating system needs to include a device driver for every type of device that is included in the system.
 
@@ -145,7 +145,7 @@ Finally, once the device is configured, the device will perform the actual reque
 
 Any results/events originating on the device will traverse this chain in reverse: from the device to the driver to the kernel and finally back to the user process.
 
-<img src="user_to_device.png">
+<img src="p3_l5_resources/user_to_device.png">
 
 ## OS Bypass
 
@@ -161,7 +161,7 @@ When the device needs to pass some data to one of the processes interacting with
 
 ## Sync vs Async Access
 
-<img src="sync_v_async.png">
+<img src="p3_l5_resources/sync_v_async.png">
 
 When an I/O request is made, the user process typically requires some response from the device, even if it is just an acknowledgement.
 
@@ -196,7 +196,7 @@ It would be nice if:
 
 To solve these underlying problems, OS's like Linux include a **virtual filesystem (VFS)** layer. This layer hides all details regarding the underlying filesystem(s) from the higher level customers.
 
-<img src="vfs.png">
+<img src="p3_l5_resources/vfs.png">
 
 Applications continue to interact with the VFS using the same POSIX API as before, and the VFS specifies a more detailed set of filesystem-related abstractions that every single underlying filesystem must implement.
 
@@ -228,7 +228,7 @@ The ext2 filesystem was the default filesystem in Linux until it was replaced by
 
 A disk partition that is used in ext2 looks as follows: 
 
-<img src="ext2.png">
+<img src="p3_l5_resources/ext2.png">
 
 The first block is not used by Linux and is often used to boot the system.
 
@@ -256,7 +256,7 @@ Finally, the block group contains the actual data blocks themselves that hold th
 
 Inodes play a key role in organizing how files are stored on disk because they are the index of all the disk blocks that correspond to a specific file.
 
-<img src="inode.png">
+<img src="p3_l5_resources/inode.png">
 
 A file is uniquely identified by its inode. The inode contains a list of all of the blocks that correspond to the actual file. In addition to the list of blocks, an inode contains metadata about the file.
 
@@ -270,7 +270,7 @@ The file shown above has 5 blocks allocated to it. If we need more storage for t
 
 One way to solve the issue of file size limits is to use **indirect pointers**. 
 
-<img src="indirect_inode.png">
+<img src="p3_l5_resources/indirect_inode.png">
 
 The first section of blocks contain blocks that point directly to data. The direct pointers will point to 1kb per entry.
 
