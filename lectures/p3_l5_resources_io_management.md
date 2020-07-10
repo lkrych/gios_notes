@@ -238,4 +238,30 @@ Inodes play a key role in organizing how files are stored on disk because they a
 
 <img src="inode.png">
 
-A FILE
+A file is uniquely identified by its inode. The inode contains a list of all of the blocks that correspond to the actual file. In addition to the list of blocks, an inode contains metadata about the file.
+
+The file shown above has 5 blocks allocated to it. If we need more storage for the file, the filesystem can allocate a free block and simply update the inode to contain a sixth entry, pointing to a newly allocated block.
+
+**The benefit of this approach is that it is easy to perform both sequential and random accesses to the file.**
+
+**The downside of this approach is that there is a limit on the file size** for files that can be indexed using this data structure. For example, if we have a 128B inode containing 4B block pointers, we can only address 32 blocks. If each block can store 1Kb of information, our file size limit is 32KB which is too restrictive. 
+
+## Inodes with indirect pointers
+
+One way to solve the issue of file size limits is to use **indirect pointers**. 
+
+<img src="indirect_inode.png">
+
+The first section of blocks contain blocks that point directly to data. The direct pointers will point to 1kb per entry.
+
+To extend the number of disk blocks that can be addressed via a single inode element, while also keeping the size of the inode small, we use indirect pointers.
+
+An indirect pointer will point to a block of pointers, where each pointers points to data. Given that a block contains 1 KB of space, and a pointer is 4B large, a single indirect pointer can point to 256KB of file content.
+
+A double indirect pointer can point to 64MB of file content.
+
+The benefits of indirect pointers is that it allows us to use relatively small inodes while being able to address larger and larger files.
+
+The downside of indirect pointers is that file access is slowed down. Without any indirect pointers, we have at most two disk accesses to get a block of content, one access for the inode, one access for the block. With double indirect pointers, we double the number of accesses: inode, block and two pointers.
+
+## Disk Access Optimizations
