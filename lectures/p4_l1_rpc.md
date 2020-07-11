@@ -37,3 +37,35 @@ One way to deal with the conversion is for the **RPC runtime, and both endpoints
 Finally, **RPC is meant to be more than a transport-level protocol**. RPC should support different types of protocols, whether UDP, TCP or others. RPC should also incorporate some higher-level mechanisms like **access control, authentication and fault-tolerance**. 
 
 ## Structure of RPC
+
+<img src="rpc_stack.png">
+
+Let's start with an example. The server is a calculator. The client needs to send the operation it wants to perform as well as the data needed to perform that operation over to the server. The server contains the implementation of that operation, and will perform it on behalf of the client.
+
+We can use **RPC to abstract away low-level communication details**. 
+
+### Client
+
+With RPC, the client is still allowed to call the function `add` with `i` and `j` even though the client doesn't hold the implementation for the `add` function.
+
+In a regular program, when a procedure is called, the execution jumps to some other point in the address space where the implementation of that procedure is stored. In this example, the when the client calls `add`, the **execution will also jump to another location in the address space**, but it won't be where the implementations of `add` lives. Instead, it will be in a `stub` implementation. To the rest of the process, this stub will look like the real `add`.
+
+The responsibility of the client stub is to create a buffer and populate the buffer with all of the appropriate information - the function name `add` and the arguments `i` and `j`. After the buffer is created, the RCP runtime sends the buffer to the server process. This may be via TCP/IP sockets or some other transport-level protocol.
+
+The stub code itself is automatically generated via some tools that are part of the RPC package, that is, the programmer doesn't have to write the stub code. 
+
+### Server
+
+When the packets are received on the server, they are handed off to the **server stub**. This stub knows how to parse the received bytes, and it will be able to determine that this is an RPC request for `add` with arguments `i` and `j`.
+
+Once this information is extracted, the stub is ready to make a call in the server process to the local `add` function with `i` and `j`. 
+
+The server will then create a buffer for the result and send it back to the client via the appropriate connection. The packets will be received by the client stub, and the information will be stored in the client address space. 
+
+Finally, the client function will return. The result of the call will be available and the client execution will proceed.
+
+## Steps in RPC
+
+Let's summarize the steps that have to take place in an RPC interaction between a client and server.
+
+
