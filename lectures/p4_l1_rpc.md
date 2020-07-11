@@ -127,3 +127,127 @@ The marshaling and unmarshaling routines are typically not written by the progra
 
 <img src="unmarshaling.png">
 
+## Binding and Registry
+
+**Binding** is the mechanism used by the client to determine which server to connect to based on the service name and the version number. In addition, binding is used to determine how to connect to a particular server. This means discovering the IP address and or network protocol required for the client/server connection to be established.
+
+To support binding, there needs to be some systems software that maintains a database of all available services. This is often called the **registry**.
+
+A registry is the yellow pages for services, you pass the registry the name of the service and the version you are looking for, and you receive the contact information for the matching server. This information will include the IP address, the port and the transport protocol.
+
+At one extreme, this registry can be a distributed online platform where any RPC can register.
+
+On the other hand, the registry can be a dedicated process that runs on every server machine and only knows about the processes running on that machine. In this case, clients must know the machine address of the host running the service, and the registry need only provide the port number the service is running on.
+
+A registry needs a naming protocol. The simplest approach is that it requires an exact name and version number. 
+
+## Pointers in RPC
+
+In regular local procedures, it makes sense to allow pointer arguments. The pointer references some address within the address space of both the calling procedure and the called procedure, so the pointer can be dereferenced without issue.
+
+This won't work in RPC. To solve this problem, an RPC system can disallow pointers to be used as arguments to any RPC procedure. Another solution is allow pointers to be used but ensure that the referenced data is marshaled into the transmitted buffer. 
+
+## Handling Partial Failures
+
+When a client hangs while waiting on a remote procedure call, it is often difficult to pinpoint the problem. Is the server down? Is the service down? Is the network down? Did the message get lost?
+
+Even if the RPC runtime incorporates some timeout/retry mechanisms, there are still no guarantees that the problem will be resolved or that the runtime will be able to provide some better insight into the problem.
+
+RPC systems incorporate a special error notification that tries to capture what went wrong with a request without claiming to provide the exact detail. This serves as a catchall for all types of failures that can potentially happen during a call.
+
+## What is SunRPC?
+
+SunRPC is an RPC package originally developed by Sun in the 1980s for UNIX systems. It is now widely available on other platforms.
+
+In SunRPC, it is assumed that the server machine is known up front and therefore the registry design choice is such that there is a registry per machine. When a client wants to talk to a particular service, it must first talk to the registry on that particular machine.
+
+SunRPC makes no assumption regarding the programming language used by the client or the server. SunRPC relies on a language-agnostic IDL, XDR, which is used both for the specification of the interface and for the specification of the encoding of data types.
+
+SunRPC allows the use of pointers and serializes the pointed-to data.
+
+SunRPC supports mechanisms for dealing with errors. It includes a retry mechanism for re-contacting the server when a request times out. The RPC runtime tries to return meaningful error messages.
+
+## SunRPC Overview
+
+SunRPC allows the client to interact via a procedure call interface.
+
+The server specifies the interface that it supports in a .x file written in XDR. SunRPC includes a compiler called **rpcgen** that will compile the interface specified in the .x file into language-specific stub for the client and the server.
+
+On start, the server process registers itself with the registry daemon available on the local machine. The per-machine registry keeps track of the name of the service, the version, the protocol, and the port number. A client must explicitly contact the registry on the target machine in order to obtain the full contact information about the desired service.
+
+When the binding happens, the client creates an RPC handle, which is used whenever the client makes any RPC calls. This allows the RPC runtime to track all of the RPC-related state on a per-client basis.
+
+Let's look at an example. In this program, the client sends an integer x to the server and the server squares it.
+
+<img src="sunrpc.png">
+
+In the .x file the server specifies all of the datatypes that are needed for the arguments the results of the procedures that it supports.
+
+In this case, the server supports one procedure `SQUARE_PROC` that has one argument of `square_in` and returns a result of the type `square_out`.
+
+The datatypes of these arguments are defined in the .x file. They are both structs that have one member that is an int.
+
+In addition to the data types, the .x file describes the actual RPC service and all of the procedures it supports.
+
+First there is the RPC service, `SQUARE_PROG`, that will be used by the clients trying to find an appropriate service to bind with. 
+
+A single RPC server can support one or more procedures. In our case, the `SQUARE_PROG` service supports one procedure `SQUARE_PROC`. There is an ID number associated with a procedure that is used internally by the RPC runtime to identify which particular procedure is being called.
+
+In addition to the procedure ID, and the input and output data types, each procedure is also identified by a version. This version applies to all of the procedures for a service.
+
+Finally, the .x file specifies a service ID. This ID is the number used by the RPC runtime to differentiate between services.
+
+The client will use service name, procedure name and service numbers, whereas the RPC runtime will refer to the service id, procedure id and the version id.
+
+## Compiling XDR
+
+To generate the client/server C stubs defined in the .x file, run
+
+```bash
+rpcgen -C <interface>.x
+```
+
+The outcome of this operation generates several files:
+* <interface>.h -  contains all of the language specific definitions.
+* <interface>_svc.c - contains the server side stub
+* <interface>_clnt.c - contains the client side stub
+* <interface>_xdr.c - contains code for marshaling and unmarshaling routines
+
+The main function in `svc.c` includes code for the registration step and also some additional housekeeping operations. The second part contains all of the code that is related to the particular RPC service. This code handles request parsing and argument marshaling.
+
+In addition, the autogenerated code will include the prototype for the actual procedure that is invoked in the server process. This has to be implemented by the developer.
+
+The client stub will include a procedure that is automatically generated and this will represent a wrapper for the actual RPC call that the client makes to the server-side process.
+
+Once we have this, the developer can just call the function.
+
+<img src="compiling_xdr.png">
+<img src="compiling_xdr2.png">
+
+## Encoding
+
+Since the server can support multiple programs, versions, and procedures, it is not enough just to pass procedure arguments from client to server.
+
+RPCs must also contain information about the service procedure id, version number and request id in the header of the request. This header will be included in the response from the server as well.
+
+In addition to these metadata fields, we clearly need to put the actual data (arguments or results) onto the wire. These datatypes are encoded into a byte stream which depends on the data type.
+
+There may be a 1-1 mapping between how the data is represented in memory and how it is represented on the wire, but this may not always be the case. What is important is that the data is encoded in a standard format that can be deserialized by both the client and server.
+
+Finally, the packet of data needs to be preceded by the transport header (TCP/UDP) in order to actually be sent along the wire in accordance with these transmission protocols.
+
+## Java RMI
+
+Another popular RPC system is Java Remote Method Invocations (Javas RMI).
+
+This system was also pioneered by Sun as a form of client/server communication methods among address spaces in the JVM.
+
+Since Java is an object-oriented language, the entities interact via method invocations, not procedure calls. 
+
+Since all the generate code is Java and the RMI system is meant for address spaces in the JVM, the IDL is language-specific.
+
+The RMI runtime is separated into two components.
+
+The **Remote Reference Layer** contains all the common code needed to provide reference semantics. For instance, it supports unicast or broadcast. In addition, it can specify return semantics.
+
+The **Transport Layer** implements all of the transport protocol-related functionality.
