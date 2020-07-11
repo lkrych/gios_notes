@@ -68,4 +68,32 @@ Finally, the client function will return. The result of the call will be availab
 
 Let's summarize the steps that have to take place in an RPC interaction between a client and server.
 
+<img src="rpc_steps.png">
+
+1. In the first step a binding occurs, the client finds and discovers the server that supports the functionality it needs. For connection-based protocols (like TCP), the actual connection will be established in this step.
+2. The client makes the actual RPC call. Control is passed to the stub, blocking the rest of the client.
+3. The client stub then **creates a data buffer and populates it** with the arguments passed in. This process is called **marshaling**. The arguments may be located in noncontiguous memory locations within the address space. The transport level, however requires a contiguous buffer for transmission. This is why marshaling is needed. 
+4. Once the buffer is available, the RPC runtime will send the message to the server via whatever transmission protocol the client and server have agreed upon during the binding process.
+5. The data is then received by the RPC runtime on the server which performs all the necessary checks to determine which server stub the request needs to be delivered to.
+6. The server stub will then unmarshal the data, extracting the necessary byte sequences from the buffer and populating the appropriate data structures. 
+7. Once the arguments are allocated and set to appropriate values, the actual procedure call can be made. This calls the implementation of the procedure that is actually part of the server process. 
+8. The server will compute the result of the operation, which will be passed to the server side stub and return to the client.
+
+Note that before any of this happens, the server must do something to let the world know what procedures it supports, what arguments it requires and where it is.
+
+## Interface Design Language
+
+When using RPC, the client and the server don't need to be developed together. They can be written by different developers in different programming languages. 
+
+For this to work, however, there must be some type of agreement so that the server can explicitly say what procedures it supports and what arguments it requires. 
+
+This information is needed so that the client can determine which server it needs to bind with. 
+
+Standardizing how this information is represented is also important because it allows the RPC runtime to incorporate some tools that allow it to automate the process of generating stub functionality.
+
+To address these needs, RPC systems rely on the use of **interface definition languages (IDLs)**. The IDL servers as **a protocol for how the client-server agreement will be expressed**. 
+
+## Specifying an IDL
+
+An interface definition language is used to describe
 
