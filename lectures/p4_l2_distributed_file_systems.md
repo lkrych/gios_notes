@@ -1,6 +1,19 @@
 # Distributed File Systems
 
 ## Table of Contents
+* [Introduction](#introduction)
+* [DFS Models](#dfs-models)
+    * [Remote File Service: Extremes](#remote-file-service-extremes)
+    * [Remote File Service: Compromise](#remote-file-service-a-compromise)
+    * [Stateless vs Stateful File Server](#stateless-vs-stateful-file-server)
+    * [Caching State](#caching-state-in-a-dfs)
+    * [File Sharing Semantics](#file-sharing-semantics-in-dfs)
+    * [Session Semantics](#session-semantics)
+    * [Periodic Updates](#periodic-updates)
+* [Replication and Partitioning](#replication-and-partitioning)
+* [NFS Design](#networking-file-system-nfs-design)
+* [NFS Versions](#nfs-versions)
+* [Paper Discussion: Sprite Distributed File System](#sprite-distributed-file-system)
 
 ## Introduction
 
@@ -28,7 +41,7 @@ Finally, files can be stored and served from all machines. This blurs the line b
 
 At one extreme, we have the u**pload/download model**. When a client wants to access a file, it downloads the entire file, performs the modifications and then uploads the entire file back to the server. 
 
-<img src="upload_download.png">
+<img src="p4_l2_resources/upload_download.png">
 
 The **benefit of this model** is that all of the **modifications can be done locally**, which means they can be done **quickly**, without incurring any network cost.
 
@@ -36,7 +49,7 @@ One downside of this model is that the client has to download the entire file, e
 
 At the other extreme, we have the true **remote file access**. In this model, the file remains on the server and every single operation has to pass through the server. The client makes no attempt to leverage any kind of local caching or buffering.
 
-<img src="true_remote_access.png">
+<img src="p4_l2_resources/true_remote_access.png">
 
 The benefit of this extreme is that the **server now has full control and knowledge of how the clients are accessing and modifying a file.** This makes it **easier to ensure that the state of the filesystem is consistent**.
 
@@ -84,14 +97,14 @@ For client/server systems, these coherence mechanisms may be triggered in differ
 
 Whenever a file is modified by any process, that change is immediately visible to any other process in the system. This will be the case even if the change isn't pushed out to the disk because both processes have access to the same buffer cache. 
 
-<img src="single_node_fs.png">
+<img src="p4_l2_resources/single_node_fs.png">
 
 
 ### DFS
 
 Even if a write gets pushed to the file server immediately, it will take some time before that update is actually delivered to the server. It is possible that another client will not see that update for a while, and every time it performs a read operation it will continue seeing "stale" data. Given that message latencies may vary, we have no way of determining how long to delay any possible read operation in order to make sure that any write from anywhere in the system arrives at the file servers so that we can guarantee no staleness.
 
-<img src="dfs_coherence.png">
+<img src="p4_l2_resources/dfs_coherence.png">
 
 In order to maintain acceptable performance, a **DFS will typically sacrifice some of the consistency and will accept more relaxed file sharing semantics**.
 
@@ -147,7 +160,7 @@ Finally, we can have a solution where the filesystem, is partitioned across some
 
 In a **Networking File System (NFS)**, clients access files across the network, hence the name. 
 
-<img src="nfs_design.png">
+<img src="p4_l2_resources/nfs_design.png">
 
 **Clients request and access files via the VFS**, using the same types of file descriptors and operations that they use to access files in their local storage. The VFS layer determines if the file belongs to the local filesystem or whether the request needs to be pushed to the NFS client so that it can be passed to the remote filesystem.
 
