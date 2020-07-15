@@ -56,3 +56,65 @@ The downside with this compromise is that the server becomes more complex. The s
 
 ## Stateless vs Stateful File Server
 
+A **stateless** server keeps no state. It has no notion of which files/blocks are being accessed, which operations are being performed, and how many clients are accessing how many files.
+
+As a result, every request has to be completely self-maintained. This type of server is suitable for the extreme models, but it cannot be used for any model that relies on caching. **Without state, we cannot achieve consistency management**. In addition, since every request has to be self-contained, more bits need to be transferred on the wire for each request.
+
+One positive of this approach is that since there is no state on the server, there is no CPU/memory utilization required to manage that state. Another positive is that this design is very resilient. Since requests cannot rely on any internal state, the server can be restarted if it fails at no detriment to the client. 
+
+A **stateful server** maintains information about the clients in the system, which files are being accessed, which types of accesses are being performed, which clients have a file cached, and which clients have read/written the file. 
+
+Because of the state, **the server can allow data to be cached and can guarantee consistency**. In addition, state management allows for other functionality like locking. Since accesses are known, clients can request relative blocks, instead of having to specify absolute offsets.
+
+On failure, however, all that state needs to be recovered so that the filesystem remains consistent. This requires that the state must be incrementally check-pointed to prevent too much loss. In addition, there are runtime overheads incurred by the server to maintain state and enforce consistency protocols and by the client to perform caching.
+
+## Caching State in a DFS
+
+Caching state in a DFS involves **allowing clients to locally maintain a portion of the state** - a file block, for example - and also **allows them to perform operations on this cached state**: `open/read/write`, etc. 
+
+Keeping the **cached portions of the file consistent with the server's representation** of the file requires **cache coherence mechanisms**.
+
+For example, two clients may cache the same portion of file. If one client modifies their local portion, and sends the update to the file server, how does the the other client become aware of those changes?
+
+For client/server systems, these coherence mechanisms may be triggered in different ways. For example, the mechanism may be triggered on demand any time a client tries to access a file, or it may be triggered periodically, or it may be triggered when a client tries to open a file. In addition, the coherence mechanisms may be driven by the client or the server.
+
+## File Sharing Semantics in DFS
+
+### Single Node, UNIX
+
+Whenever a file is modified by any process, that change is immediately visible to any other process in the system. This will be the case even if the change isn't pushed out to the disk because both processes have access to the same buffer cache. 
+
+<img src="single_node_fs.png">
+
+
+### DFS
+
+Even if a write gets pushed to the file server immediately, it will take some time before that update is actually delivered to the server. It is possible that another client will not see that update for a while, and every time it performs a read operation it will continue seeing "stale" data. Given that message latencies may vary, we have no way of determining how long to delay any possible read operation in order to make sure that any write from anywhere in the system arrives at the file servers so that we can guarantee no staleness.
+
+<img src="dfs_coherence.png">
+
+In order to maintain acceptable performance, a **DFS will typically sacrifice some of the consistency and will accept more relaxed file sharing semantics**.
+
+## Session Semantics
+
+In **session semantics**, the client writes back whatever data was modified on close. Whenever a client needs to `open` a file, the cache is skipped, and the client checks to see if a more recent version is present on the file server. 
+
+With session semantics, it is very possible for a client to be reading a stale version of a file. However, **we know that when we close a file or open a file that we are consistent with the rest of the filesystem at that moment**.
+
+Session semantics are easy to reason about, but they are not great for situations where clients want to concurrently share a file. For example, for two clients to be able to write to a file and see each other's updates, they will constantly need to `close` and `open` the file. Also, files that stay open for longer periods of time may become severely inconsistent.
+
+## Periodic Updates
+
+In order **to avoid long periods of inconsistency, the client may write back changes periodically to the server**. In addition, the server can send invalidation notifications periodically, which can enforce time bounds on inconsistency. Once the server notification is received, a client has to sync with the most recent version of the file.
+
+The filesystem can provide explicit operations to let the client `flush` its updates to the server, or `sync` its state with the remote server. 
+
+## Other Strategies
+
+With immutable files, you never modify an old file, but rather, create a new file instead.
+
+With transactions, the filesystem exports some API to allow clients to group file updates into a single batch to be applied atomically.
+
+## File vs Directory Service
+
+Filesystems have **two different types of files: regular files and directories**. These two types of files often have **very different access patterns**. As a result, it is not uncommon to adopt one type of semantics for files, and another for directories. For example, we may have session semantics for files, and UNIX semantics for directories.
