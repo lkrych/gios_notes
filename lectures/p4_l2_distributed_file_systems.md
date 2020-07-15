@@ -157,3 +157,83 @@ When an `open` request comes to an NFS server, it will create a file handle. **T
 
 ## NFS Versions
 
+NFSv3 is stateless, whereas NFSv4 is stateful. Since NFSv4 is stateful, it can support operations like file caching and file locking. Even though NFSv3 is stateless, the implementation typically includes modules that provide stateful functionality.
+
+For files that are not access concurrently, NFS behaves with session semantics. On `close`, all of the changes made to a file are flushed to the server, and on `open` a check is performed and, if necessary, the cached portions of the files are updated.
+
+NFS also supports periodic updates. Using these updates will break the session semantics when there are multiple clients that are concurrently updating a file.
+
+The periods by default are 3 seconds for files and 30 seconds for directories. The rationale is that directories are modified less frequently, and when modified, the changes are more easily resolved.
+
+NFSv4 incorporates a delegation mechanism where the server delegates to the client all rights to manage a file for a given period of time. This avoids the periodic update checks mentioned above.
+
+With server-side state, NFS can support locking. **NFS uses a lease-based mechanism to support locking**. When a client **acquires a lock, the server assigns a certain time period to the client during which the lock is valid**. It is then the clients responsibility to either release the lock within the specified time frame or explicitly extend the lock. If the client goes down, the server isn't locked forever.
+
+NFSv4 also supports a read/writer lock called a "share reservation". It also supports mechanisms for upgrading from being a reader to writer and vice versa.
+
+## Sprite Distributed Filesystem
+
+In the paper, **Caching in the Sprite Network Filesystem**, the researchers used trace data on usage/file access to analyze DFS design requirements.
+
+They found that 33% of file accesses are writes. Caching can be an important mechanism to improve performance because the other accesses are reads, which can all be improved via caching! In order to leverage the cache for writes as well, a write-through policy is not sufficient.
+
+Session semantics may have been a good strategy, but the authors also noticed that 75% of files were open less than 0.5 seconds and 90% of files were open less than 10 seconds. This means that the overheads associated with session semantics were still too high.
+
+They also observed that 20-30% of new data was deleted within 30 seconds, with 50% of new data being deleted within 5 minutes. The also observed that file sharing in their system is rare. As a result, the authors decided that write-back on close was not really necessary.
+
+Of course, the authors needed to support concurrent access even though they didn't need to optimize for it
+
+## Sprite DFS from Analysis to Design
+
+The authors decided that **Sprite should support caching, and use a write-back policy** to send changes to the server.
+
+Every 30 seconds, a client will write back all of the blocks that have not been modified within the last 30 seconds. Note that a file may be opened and closed multiple times by the client before any data is sent to the server.
+
+The intuition behind this is that blocks that have been more recently modified will continue to be modified. It doesn't make sense to force write-backs on blocks that are likely to be worked on more. This strategy avoids sending the same blocks to the server over and over.
+
+Note that this 30 second threshold is directly related to authors' observation that 20-30% of new data was deleted within 30 seconds.
+
+When a client comes along and wants to open a file that is being written by another client, the server will contact the writer and collect all of the outstanding dirty blocks.
+
+Every open operation has to go to the server. This means that directories cannot be cached on the client.
+
+Finally, **caching is completely disabled on concurrent writes**. In this case, all of the writes will be serialized on the server-side. Because concurrent writes do not happen frequently, this cost will not be significant.
+
+## File Access Operations in Sprite
+
+Assume that we have multiple clients that are accessing a file for reading, and one writer client.
+
+All `open` operations will go through the server.
+
+All of the clients will be allowed to cache blocks. The writer will also have to keep timestamps on each modified block in order to enforce the 30 second write-back policy.
+
+When the writer `closes` the file, the contents will be stored in the writers' cache. Of course, the next open will still have to go through the server. This means that the server and the client need to keep some sort of version number in order to stay in sync.
+
+On a per file basis, the client keeps track of:
+
+   * cache (overall yes/no)
+   * cached blocks
+   * timer for each dirty block
+   * version number
+
+On a per file basis, the server keeps track of:
+
+   * readers
+   * writer
+   * version
+
+Let's assume that a new writer comes along after the first writer has closed the file. This is referred to as a **sequential writer**.
+
+In this case, the server contacts the old writer to gather all of the dirty blocks, which is convenient given that the client keeps track of all dirty blocks.
+
+If the old writer has closed the file, the server will update the value of the writer it holds to point to the new writer. At this point, the new writer can proceed and cache the file.
+
+Let's assume that a third writer comes along and wants to write to the file concurrently with the current writer. This is concurrent sharing.
+
+When the write request comes, the server contacts the current writer to gather the dirty blocks. When the server realizes that this writer hasn't closed the file, it will disable the caching of the file for both writers.
+
+**To enable/disable caching, it makes sense for the server to maintain a cacheable flag on a per file basis**.
+
+Both writers will continue to have access to the file, but all operations will have to go through the server.
+
+When a writer closes a file, the server will see it - as every operation goes through the server - and will make the file cacheable again.
