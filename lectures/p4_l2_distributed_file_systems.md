@@ -118,3 +118,42 @@ With transactions, the filesystem exports some API to allow clients to group fil
 ## File vs Directory Service
 
 Filesystems have **two different types of files: regular files and directories**. These two types of files often have **very different access patterns**. As a result, it is not uncommon to adopt one type of semantics for files, and another for directories. For example, we may have session semantics for files, and UNIX semantics for directories.
+
+## Replication and Partitioning
+
+Fileserver distribution can be accomplished via replication and/or partitioning.
+
+With **replication**, the **filesystem can be replicated onto multiple machines**, such that each machine holds all of the files. 
+
+The benefit of this is that the **client requests can be load balanced across all machines which leads to better performance**. In addition, the system overall can be more available. Finally, this system is more fault tolerant. When one replica fails, the other replicas can server clients with no degradation of service.
+
+The downside of this approach is that writes become more complex. One solution is to force clients to write synchronously to all replicas. Another solution involves writing to one replica and then having a background job asynchronously propagate the write to other replicas.
+
+If replicas get out of sync, they must be reconciled. **One simple reconciliation technique is voting, where the majority wins**. 
+
+With **partitioning, every machine has a subset of all the files in the system**. Partitioning may be based on filename, file type, directory, or some other grouping.
+
+The main benefit of this approach is that it **allows for better scalability** as the size of the filesystem grows. With the replicated approach, adding more machines does not mean that you can support a larger filesystem. WIth the partitioned approach, more machines means more files. 
+
+As well, **writes are simple**. Since a single file only lives on a single machine, writes to that file are localized to that machine.
+
+A main downside of this approach is that when a partition goes down, the data stored on that partition can no longer be accessed.
+
+In addition, **balancing the system is more difficult**, because we have to take into consideration how the particular files are accessed. If there is a particular file that is more frequently accessed by most clients in the system, we can run into the issue of **hotspots**.
+
+Finally, we can have a solution where the filesystem, is partitioned across some axis, and then each partition is replicated some number of times.
+
+## Networking File System (NFS) Design
+
+In a **Networking File System (NFS)**, clients access files across the network, hence the name. 
+
+<img src="nfs_design.png">
+
+**Clients request and access files via the VFS**, using the same types of file descriptors and operations that they use to access files in their local storage. The VFS layer determines if the file belongs to the local filesystem or whether the request needs to be pushed to the NFS client so that it can be passed to the remote filesystem.
+
+**The NFS client interacts with the NFS server via RPC**. The NFS server receives the request, forms it into a proper filesystem operation that is delivered to the local VFS. From there, the request is passed to the local file system interface. On the server machine, requests coming from the NFS server look identical to filesystem requests coming from any other application running on the server machine.
+
+When an `open` request comes to an NFS server, it will create a file handle. **This file handle will contain information about the server machine as well as information about the file. This handle will be returned back to the client machine**. Whenever the client wants to access files via NFS, it can pass this handle. If the file is deleted or the server machine dies, the handle becomes stale.
+
+## NFS Versions
+
