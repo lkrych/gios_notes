@@ -57,3 +57,21 @@ Regarding Xen, the VMs that run in the virtualized environment are referred to a
 VMware used to have a control core based in Linux (similar to dom0 in Xen), but now all of the configuration is done via remote APIs.
 
 ## Virtualization Models: Hosted
+
+The other type of virtualization model is the **hosted** (or **type 2**) model. In this model, there is a **full-fledged host OS that manages all of the hardware resources**. The host OS integrates a VMM, which is responsible for providing the VMs with their virtual platform interface.
+
+The VMM module will invoke device drivers and other host components as needed.
+
+One benefit of this model is that is can leverage all of the services and mechanisms that are already developed for the host OS. Much less functionality needs to be developed for the VMM module itself.
+
+In this setup, **you can run guest VMs through the VMM module as well as native applications** directly on the host OS.
+
+<img src="hosted.png">
+
+One example of the hosted model is **kernel-based VM (KVM)** which is built into Linux. The Linux host provides all aspects of the physical hardware management and can run regular linux applications directly.
+
+The support for running guest VMs come from a combination of the KVM VMM module and a **hardware emulator called QEMU**.
+
+QEMU is used as a virtual interface between the VM and the physical hardware, and only intervenes during certain types of critical instructions, for example I/O management.
+
+KVM has been able to leverage all of the advances of the open source Linux community. Because of this the KVM can quickly adopt new features and fixes. 
