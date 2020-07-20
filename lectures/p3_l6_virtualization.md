@@ -38,7 +38,7 @@ Because the OS and the applications are nicely encapsulated in a VM, it becomes 
 
 Lastly, virtualization is good for OS research and providing support for legacy OSes. 
 
-## Virtualization Models - Bare Metal
+## Virtualization Models: Bare Metal
 
 In **bare-metal** virtualization (also known as **hypervisor-based** or **type 1 virtualization**), the VMM manages all of the hardware resource and supports execution of the VMs.
 
@@ -127,3 +127,11 @@ Binary translation adds overhead! Some mechanisms to reduce this overhead are ca
 ## Paravirtualization
 
 Another approach **gives up on unmodified guests, instead focusing on performance**. This approach is called **paravirtualization**.
+
+In paravirtualization, the guest now knows that it is running in a virtualized environment on top of a hypervisor.
+
+A paravirtualized guest OS may not directly try to perform operations it knows will fail, but will **instead make explicit calls to the hypervisor to achieve the desired behavior**. These calls are called **hypercalls** and they behave similar to system calls. The hypercall will trap to the hypervisor which upon performing the required operation with the data supplied by the guest, will pass control back to the guest.
+
+This approach was taken by Xen.
+
+## Memory Virtualization: Full Virtualization
