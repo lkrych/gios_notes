@@ -26,3 +26,34 @@ Virtualization is supported by the VMM, which has three responsibilities:
 
 ## Benefits of Virtualization
 
+Virtualization enables **consolidation**, the ability to run multiple VMs on a single physical platform. This leads to fewer machines with less space, with fewer admins, with potentially a smaller electric bill!
+
+It allows companies to decrease cost and improve manageability. 
+
+Virtualization also makes **migration** easier. Since the OS and the applications are no longer coupled to a physical system, it is easy to setup, teardown and clone virtual machines.
+
+Virtualization also helps us address **availability** and **reliability**. If we notice that a physical machine is about to go down, we can easily spin up a new VM on a different physical platform.
+
+Because the OS and the applications are nicely encapsulated in a VM, it becomes easier to contain bugs or malicious code to those isolated containers without bringing down other VMs or the physical platform.
+
+Lastly, virtualization is good for OS research and providing support for legacy OSes. 
+
+## Virtualization Models - Bare Metal
+
+In **bare-metal** virtualization (also known as **hypervisor-based** or **type 1 virtualization**), the VMM manages all of the hardware resource and supports execution of the VMs.
+
+<img src="bare_metal.png">
+
+One issues with this model concerns devices. According to the model, the hypervisor must manage all possible devices. In other words, device manufacturers have to provide device drivers not just for the different OS's, but also for different hypervisors. 
+
+To eliminate this problem, the hypervisor model typically integrates a special virtual machine, a **service VM**, that runs a **standardized OS with full hardware access** privileges, allowing it to manipulate hardware as if it was native. 
+
+The privileged VM runs all of the device drivers and controls how the devices on the platform are used. This VM will run some other configuration and management tasks to further assist the hypervisor.
+
+This model is adapted by Xen virtualization software and by the ESX hypervisor from VMware.
+
+Regarding Xen, the VMs that run in the virtualized environment are referred to as domains. The privileged domain is referred to as **dom0** and the guest domains are referred to as **domUs**. Xen is the hypervisor and all of the device drivers run on dom0.
+
+VMware used to have a control core based in Linux (similar to dom0 in Xen), but now all of the configuration is done via remote APIs.
+
+## Virtualization Models: Hosted
