@@ -75,3 +75,55 @@ The support for running guest VMs come from a combination of the KVM VMM module 
 QEMU is used as a virtual interface between the VM and the physical hardware, and only intervenes during certain types of critical instructions, for example I/O management.
 
 KVM has been able to leverage all of the advances of the open source Linux community. Because of this the KVM can quickly adopt new features and fixes. 
+
+## Hardware Protection Levels
+
+Commodity hardware has more than two protection levels. For example, x86 architecture has four **protection levels**, these levels are called **rings**.
+
+**Ring 0** has the **highest privilege and can access all resources and execute all hardware supported instructions**. In a native model, the OS resides are ring 0.
+
+In constrast, **Ring 3 has the least privilege**. This is where **applications reside**. When an application tries to perform some operation for which it does not have privilege, a trap will be caused and control will be switched to ring 0.
+
+In virtualization setups, the hypervisor sits at ring 0, pushing the OS to ring 1. The applications remain at ring 3.
+
+More recent x86 architectures introduce two different protection modes: root and non-root. Within each mode, the four rings exist.
+
+When running in root mode, everthing is permitted. The hypervisor resides in ring 0 of the root mode. In contrast, in non-root mode, certain types of operations are not permitted. Guest VMs operate in non-root mode, with their applications in ring 3 of this mode, and their OS in ring 0.
+
+Attempts by the guest OS to perform privileged operations cause traps called **VMExits**, which **trigger a switch to root mode, passing control to the hypervisor**. When the hypervisor completes its operation, it passes control back to the VM, by performing a **VMEntry**, which switches out of root mode.
+
+## Processor Virtualization
+
+**Guest instructions are executed directly by the hardware**. The VMM does not interfere with every instruction that is issued by the guest OS or its applications.
+
+As long as the **guest OS is operating within the resources allocated to it by the hypervisor, the instructions will operate at hardware speeds**, which underlines the efficiency of virtualization!
+
+Whenever a **privileged instruction is issued, the process causes a trap to the hypervisor**. At this point, t**he hypervisor can determine if the operation is to be allowed** or not. If the operation is illegal, the hypervisor can perform some punitive action, like shutting down the VM. If the operation should be allowed, the hypervisor must provide the necessary emulation to ensure that the guest OS receives the response it was expecting from the hardware. This is known as **trap-and-emulate**. The hypervisor intervention should be invisible to the guest OS.
+
+## x86 Virtualization in the Past
+
+Before 2005, x86 platforms had only the four privilege rings, without the root/non-root distinction. The basic strategy of virtualization software was to run the hypervisor in ring 0, and the guest OS in ring 1. 
+
+However, there were exactly 17 hardware instructions that were privileged (required ring 0), but didn't cause a trap. Issuing them from another protection level wouldn't pass control to the hypervisor and they would fail silently.
+
+For example, enabling/disabling interrupts requires manipulating a bit in a privileged register, which can be done with the POPF/PUSHF instructions. When these instructions were issued, they just failed silently.
+
+Since control isn't passed to the hypervisor, the hypervisor has no idea that the OS wanted to change the interrupt status, so it cannot emulate that behavior.
+
+At the same time, since the failure was silent, the OS doesn't know about it and assumes the change was successful. As a result, it continues with its execution.
+
+## Binary Translation
+
+One way to solve the issue of the 17 hardware instructions was to write the VM binary to **never issue those 17 instructions** :). This process is called **binary translation**.
+
+The goal pursued by binary translation is to run **unmodified guest OS**. This is known as **full virtualization**.
+
+To avoid the bad hardware instructions, interception and translation had to take place at the virtualization layer. Instruction sequences were caught by the VM binary to see if any of the 17 hardware instructions were present. If the code did not have any of these instructions, it was marked as safe and allowed to execute at hardware speeds. 
+
+However, if one of the bad instructions was found, that instruction was translated into an alternative instruction sequence that emulated the desired behavior.
+
+Binary translation adds overhead! Some mechanisms to reduce this overhead are caching translated code fragments and making sure to analyze kernel code executed in the guest OS.
+
+## Paravirtualization
+
+Another approach **gives up on unmodified guests, instead focusing on performance**. This approach is called **paravirtualization**.
