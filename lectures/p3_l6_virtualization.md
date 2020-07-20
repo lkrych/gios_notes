@@ -135,3 +135,25 @@ A paravirtualized guest OS may not directly try to perform operations it knows w
 This approach was taken by Xen.
 
 ## Memory Virtualization: Full Virtualization
+
+For full virtualization, a key requirement is that the guest OS continues to observe a contiguous, linear address space that starts from zero. This is what an OS would see if it actually owned the physical memory.
+
+To achieve this, we need to distinguish between three types of addresses: **virtual addresses, physical addresses and machine addresses**.
+
+1. **Virtual addresses** are used by the applications in the guest. 
+2. **Physical addresses** are used by the kernel of the guest. 
+3. **Machine addresses** correspond to the physical addresses on the underlying physical platform.
+
+The **guest OS makes mappings of virtual addresses to the physical addresses** that is thinks it owns. Underneath, **the hypervisor maintains a mapping of the physical addresses to the machine addresses.** 
+
+In effect, there are two page tables: one maintained by the guest OS, and one maintained by the hypervisor.
+
+At the hardware level, the MMU and TLB help with the address translation process and free us from having to implement these translations in software.
+
+Unfortunately, this can't be done for the mapping between virtual and physical addresses.
+
+Another option is for the hypervisor to maintain a **shadow page table**. In the shadow page table, the hypervisor re-maps the virtual addresses to the machine addresses, without considering the physical addresses.
+
+The hypervisor must maintain consistency between these two page tables and it will have to invalidate the shadow page table on context switch.
+
+It will also have to make sure to write protect the page table in order to keep track of new mappings. The
