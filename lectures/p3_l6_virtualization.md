@@ -156,4 +156,72 @@ Another option is for the hypervisor to maintain a **shadow page table**. In the
 
 The hypervisor must maintain consistency between these two page tables and it will have to invalidate the shadow page table on context switch.
 
-It will also have to make sure to write protect the page table in order to keep track of new mappings. The
+It will also have to make sure to write protect the page table in order to keep track of new mappings. The write protection is necessary to ensure that whenever the guest tried to establish new address mappings, it will trap to the hypervisor. During the trap, the hypervisor can update its shadow page table.
+
+## Memory Virtualization: Paravirtualization
+
+Since an OS knows that it is in a virtualized environment, it is no longer a strict requirement that the guest OS uses contiguous physical memory starting at 0.
+
+The guest OS can explicitly register its page tables with the hypervisor, so there is no need for two page tables.
+
+The guest still doesn't have write permissions on the page table, which is now used directly by the hardware (as this would allow the guest to potentially corrupt another guest by overwriting its memory).
+
+Because of this, every write to the page table will cause a trap to the hypervisor. However, since the guest is paravirtualized, we can modify the guest to **batch table updates in a single hypercall**, amortizing the cost of VM exit across multiple updates.
+
+Many of the overheads associated with memory virtualization in both full and paravirtualization have been reduced by improvements in hardware platforms.
+
+## Device Virtualization Introduction
+
+When we talk about CPU/Memory virtualization, certain things are relatively less complicated because there is a significant level of standardization at the **instruction set architecture (ISA)** level across different platforms. 
+
+From a virtualization standpoint, we know that we have to support a specific ISA and we don't care if there are lower level differences between the hardware because it is up to the hardware manufactures to be standardized at the ISA level.
+
+When we look at devices, there is a much greater diversity in the type of devices. Also, there is a lack of standardization when it comes to the specifics of the device interface and the semantics of the interface.
+
+To deal with this diversity, virtualization solutions adapt on of three models to virtualize devices.
+
+## Device Virtualization: Passthrough
+
+In the **passthrough model**, the **VMM-level driver is responsible for configuring the access permissions to the device**. For example, it will allow a guest VM to have access to the memory registers corresponding to a device. 
+
+<img src="passthrough.png">
+
+In this approach, the guest VM has exclusive access to a device. In addition, the VM can directly access the device, without interacting with the VMM. This model is also called VMM-bypass.
+
+The problem with this exclusive access is that it makes sharing devices across VMs difficult. The hypervisor needs to continuously reassign who the device belongs to over time, and device access will not happen concurrently across VMs. This is often unfeasible.
+
+Because the hypervisor is completely out of the way, the guest VM and the device driver in the guest VM directly operate on and control the device. This means that there needs to be a device of the exact same type on the physical platform that the guest OS expects.
+
+One of the benefits of virtualization is that the guest VMs are decoupled from the physical hardware, which makes migration across physical nodes easy.
+
+The **passthrough model breaks this decoupling as it binds a device to a VM**. 
+
+## Device Virtualization: Hypervisor Direct
+
+In the **hypervisor-direct model**, the **hypervisor intercepts every device access request** that is performed by the guest VM.
+
+<img src="hypervisor_direct.png">
+
+The hypervisor no longer has the constraint that the requested device and the physical device must match. 
+
+Instead the hypervisor can translate the device access request to some generic representation of I/O for that particular family of devices - network or disk for example, and then traverse the hypervisor resident I/O stack. The bottom fo that stack is the actual real device driver, which the hypervisor will finally invoke to fulfill the request.
+
+A key benefit of this approach is that the VM remains decoupled from the physical platform/device. As a result, migration remains easy.
+
+The downside of this model is that the device emulation step adds latency to device accesses. As well, this model requires that the hypervisor supports all of the drivers so it can perform the necessary emulations, which means that the hypervisor is now exposed to all of the complexities and complications of various device drivers.
+
+## Device Virtualization: Split Device Driver
+
+In the **split device driver model**, all of the device accesses are controlled in a way that **involves a component that resides in a guest VM and a component that resides in a hypervisor layer**.
+
+<img src="split_device.png">
+
+The **front-end driver resides in the guest VM** and the actual driver for the physical device, **the back-end driver, resides in the service VM** (or the host in type 2 virtualization.)
+
+Although the back-end driver doesn't necessarily have to be modified, as it is the same driver that the OS would use as if it were running natively, the front-end driver does need to be modified.
+
+The front-end driver needs to take the device operations that are made by the applications in the guest and then wrap them in a standard format to be delivered to the back-end. Because oft his modification, this model can only be used in paravirtualized guests.
+
+One benefit of this approach is that the device emulation overhead can be eliminated. Another benefit is that the centralized back-end allows better management of shared devices.
+
+## Hardware Virtualization
