@@ -185,3 +185,99 @@ In this approach, we can change the manager node by updating the mapping table. 
 <img src="dsm_metadata.png">
 
 ## Implementing DSM
+
+One thing to consider when implementing a DSM is that the DSM layer **must intercept every single access to the shared state.**
+
+This is needed because the DSM layer needs to detect whether an access is local or remote so that it can create and send a message requesting access if the memory is remote. It is also needed because the DSM layers need to detect that a node is performing an update operation to a locally-controlled portion of the memory so that it can trigger coherence messages.
+
+These overheads should be avoided when accessing local, non-shared state. To achieve these goals, we can leverage hardware support at the memory management unit (MMU).
+
+If the MMU **doesn't find a valid mapping** for a particular virtual address in a page table or it detects a write attempt to protected memory, **it will trap into the OS**. This will happen every time we need to access a remote address. The OS will pass the request to the DSM layer to send out the appropriate message.
+
+Similarly, when content is cached on a node, the DSM layer will ensure that the memory is write-protected, which will cause a trap if anyone tries to modify it. This will turn control over to the OS which will pass the relevant information over to the DSM in order to generate coherence messages.
+
+When implementing a DSM system, it can also be useful to leverage additional information made available by the MMU. For example, we can track whether a page is dirty or whether a page has been accessed. This allows us to implement different consistency policies.
+
+For an object-based DSM that is implemented at the level of the programming runtime, the implementation can consider similar types of mechanism that leverage the underlying OS services. 
+
+## What is a consistency model?
+
+The exact details of how a DSM system will be designed depend on the consistency model the system wants to enforce.
+
+Consistency models exist in the context of the implementations of applications that manage distributed state. 
+
+The consistency model is **a guarantee that state changes will behave in a certain way** as long as the upper software layers follow a certain set of rules. 
+
+The consistency models states that the memory behaves correctly if and only of the software follows certain rules. This implies that the softwares needs to use certain APIs for memory access, or that the software needs to set certain expectations based on the memory guarantees or lack thereof.
+
+<img src="consistency_model_notation.png">
+
+## Strict Consistency
+
+In a perfect consistency model, we would achieve absolute ordering and immediate visibility of any state update and access.
+
+In this model, every node in the system will see all the writes in the system in the exact same order immediately as they are applied. This is only possible in a fantasy world where changes are instantaneous and immediately visible.
+
+In practice, even on a single SMP system, there are no guarantees on the ordering of accesses from different cores unless we use some additional locking and synchronization primitives.
+
+In distributed systems, additional latency and the possibility of message loss or reordering make strict consistency impossible to guarantee.
+
+**While strict consistency is a nice theoretical model, it is not sustainable in practice.** Other consistency models are used instead.
+
+## Sequential Consistency
+
+Given that strict consistency is impossible, the next best option with reasonable cost is sequential consistency.
+
+With sequential consistency, it is not important that we see updates immediately. Rather **it is important that the ordering of the updates be consistent**.
+
+According to sequential consistency, the memory updates from different processors may be arbitrarily interleaved.
+
+However, if we let one process see one ordering of the updates, we have to make sure that all other processes see the same ordering of those updates.
+
+<img src="mal_sequential.png">
+
+In the above case, we cannot let P3 observe one value at m1 while concurrently showing a different value to P4.
+
+**In sequential consistency, all processes will see the same interleaving**. This interleaving may not correspond to the real way in which these operations were ordered, but it is guaranteed that every process in the system will see the same sequential ordering of updates.
+
+One constraint of the interleaving is that the updates made by the same process will not be arbitrarily interleaved. Operations from the same process always appear in the order they were issues.
+
+## Causal Consistency
+
+Forcing all the processes to see the exact same order on all updates may be overkill.
+
+Causal consistency models guarantee that they will detect the possible causal relationship between updates, and if updates are causally related then the memory will guarantee that those writes will be correctly ordered.
+
+<img src="causal_consistency.png">
+
+In this situation, a causal consistency model will enforce that a process must read X from m1 before reading Y from m2.
+
+For writes that are not casually-related - concurrent writes - there are no such guarantees.
+
+Just like before, causal consistency ensures that writes that are performed on the same processor will be visible in the exact same order on other processors.
+
+## Weak Consistency
+
+In the consistency models that we have discussed so far, the memory was accessed only by read and write operations.
+
+In the weak consistency models, it's possible to have additional operations for accessing memory.
+
+A memory system, may introduce **synchronization points** as operations that are available to upper layers of software. In addition to telling the underlying memory system, to read or write, you will now be able to tell the system to sync.
+
+A synchronization point makes sure that all o the updates that have happened prior to the sync point will become visible to other processors. It also makes sure that that all of the updates that have happened on other processors will become visible at the synchronizing processor.
+
+If P1 performs a synchronization operation after writing to m1, that doesn't guarantee that P2 will see that particular update at this moment. P2 hasn't explicitly synced with the rest of the system. The sync point has to be called by both processes.
+
+<img src="weak_consistency.png">
+
+Once a synchronization is performed on P2, P2 will see all of the previous updates that have happened to any memory location in the system. When P2 performs the sync, it is guaranteed to see the value of m1 at the time that P1 performed the sync.
+
+While in this model, we use a single synchronization operation for all of the variables in the system, it is possible to have solutions where different synchronization operations are associated with different granularities.
+
+It is also possible to separate the synchronization types into two different operations.
+
+A system may provide an entry/acquire point, which can be invoked when a particular process requires that all of the updates performed by other processors are visible to it. This corresponds to the sync that P2 performs above.
+
+Similarly, a system may provide an exit/release point, which can be invoked when a particular process wishes to release to all other processors the updates that it has made. This corresponds to the sync that P1 performs.
+
+These finer-grained operations ensure that the system controls that overheads that are imposed by the DSM layer. The goal of this control is to limit the required data movement and coherence operations that will be exchanged among the nodes in the system. As a result, the DSM layer will have to maintain some additional state to keep track of the different operations it needs to support.
