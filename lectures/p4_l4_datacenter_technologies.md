@@ -2,6 +2,14 @@
 
 ## Table of Contents
 
+* [Internet Services](#internet-services)
+* [Internet Service Architectures](#internet-service-architectures)
+* [Homogenous Architectures](#homogenous-architectures)
+* [Heterogenous Architectures](heterogenous-architectures)
+* [Cloud Computing](#cloud-computing)
+* [Cloud Deployment Models](#cloud-deployment-models)
+* [Cloud Service Models](#cloud-service-models)
+
 ## Internet Services
 
 An internet service is any type of service that is accessible via a web interface. Users communicate with these services via web requests that are issued by their web browsers.
@@ -83,7 +91,7 @@ Finally, **community clouds** are public clouds that are used by certain types o
 
 ## Cloud Service Models
 
-<img src="service_models.png">
+<img src="p4_l4_resources/service_models.png">
 
 Without the use of cloud computing, you run your application on premises, which means you have to take care of everything yourself.
 
