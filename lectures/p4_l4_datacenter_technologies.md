@@ -81,3 +81,16 @@ In **private clouds**, the infrastructure and software is owned by the same enti
 
 Finally, **community clouds** are public clouds that are used by certain types of users.
 
+## Cloud Service Models
+
+<img src="service_models.png">
+
+Without the use of cloud computing, you run your application on premises, which means you have to take care of everything yourself.
+
+At the other extreme, you can use cloud computing services to provide you with a complete application. This is what we call **Software as a Service (SaaS)**. Gmail is a great example of a SaaS platform.
+
+A **Platform as a Service (PaaS)** provides you with certain APIs to allow you to develop certain types of applications. The platform provides an execution environment, which includes the OS and other tools necessary for the application to run in that environment. Google App Engine is an example of a PaaS platform. This PaaS provides everything needed to develop android applications.
+
+At the lowest level, clouds can provide infrastructure instances, like compute instances that consist of the CPUs with accompanying memory, storage and network infrastructure. Amazon EC2 is a such a model of this **Infrastructure as a Service (IaaS)**.
+
+These types of clouds still don't provide access to the physical resources directly, rather only the virtualized resources. It is often the case that you are sharing the physical resources with other tenants. That being said, Amazon does provide high-performance instances that are single tenant.
