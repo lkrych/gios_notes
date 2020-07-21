@@ -2,6 +2,24 @@
 
 ## Table of Contents
 
+* [Introduction](#introduction)
+* [Peer-Distributed Applicatons](#peer-distributed-applications)
+* [Distributed Shared Memory](#distributed-shared-memory-introduction)
+    * [Hardware vs Software DSM](#hardware-vs-software-dsm)
+    * [Sharing Granularity](#dsm-design-sharing-granularity)
+    * [Access Algorithm](#dsm-design-access-algorithm)
+    * [Migration vs Replication](#dsm-design-migration-vs-replication)
+    * [Consistency Management](#dsm-design-consistency-management)
+* [DSM Architecture](#dsm-architecture)
+    * [Indexing Distributed State](#indexing-distributed-state)
+* [Implementing DSM](#implementing-dsm)
+* [Consistency Model](#what-is-a-consistency-model)
+    * [Strict Consistency](#strict-consistency)
+    * [Sequential Consistency](#sequential-consistency)
+    * [Causal Consistency](#causal-consistency)
+    * [Weak Consistency](#weak-consistency)
+
+
 ## Introduction
 
 Distributed file systems are an example of a distributed service in which the state - the files - are stored on some set of server nodes and are then accessed by some set of client nodes. The servers own and manage the state and provide a service - the file access operations - which are requested by the clients and operate on the state.
@@ -20,9 +38,9 @@ All of the nodes are **peers**, they all require accesses to the state located e
 
 This is slightly different from **peer-to-peer** applications: it's likely that there will still be some nodes that provide some overall configuration or management of the entire system. In a peer-to-peer system, these tasks would still be performed cooperatively by all peers.
 
-## Distributed Shared Memory (DSM)
+## Distributed Shared Memory Introduction
 
-Distributed shared memory is a service that manages memory across multiple nodes so that applications will have the illusion that they are running on a single shared-memory machine.
+Distributed shared memory (DSM) is a service that manages memory across multiple nodes so that applications will have the illusion that they are running on a single shared-memory machine.
 
 Each node in the system owns some portion of the physical memory, and provides the operations - reads and writes - on that memory. The reads and write may originate from any of the nodes in the system.
 
@@ -44,7 +62,7 @@ Hardware-supported DSM relies on some physical interconnect. The OS running on e
 
 Memory accesses that reference remote emory locations are passed to the network interconnect card, which translates remote memory accesses into interconnect messages that are then passed to the correct node.
 
-<img src="hardware_dsm.png">
+<img src="p4_l3_resources/hardware_dsm.png">
 
 The NICs are involved in all aspects of the memory management, access and consistency  and even support some atomics.
 
@@ -182,7 +200,7 @@ Certain bits from the address are used to identify the manager. There will be a 
 
 In this approach, we can change the manager node by updating the mapping table. We don't need to change the object identifier.
 
-<img src="dsm_metadata.png">
+<img src="p4_l3_resources/dsm_metadata.png">
 
 ## Implementing DSM
 
@@ -210,7 +228,7 @@ The consistency model is **a guarantee that state changes will behave in a certa
 
 The consistency models states that the memory behaves correctly if and only of the software follows certain rules. This implies that the softwares needs to use certain APIs for memory access, or that the software needs to set certain expectations based on the memory guarantees or lack thereof.
 
-<img src="consistency_model_notation.png">
+<img src="p4_l3_resources/consistency_model_notation.png">
 
 ## Strict Consistency
 
@@ -234,7 +252,7 @@ According to sequential consistency, the memory updates from different processor
 
 However, if we let one process see one ordering of the updates, we have to make sure that all other processes see the same ordering of those updates.
 
-<img src="mal_sequential.png">
+<img src="p4_l3_resources/mal_sequential.png">
 
 In the above case, we cannot let P3 observe one value at m1 while concurrently showing a different value to P4.
 
@@ -248,7 +266,7 @@ Forcing all the processes to see the exact same order on all updates may be over
 
 Causal consistency models guarantee that they will detect the possible causal relationship between updates, and if updates are causally related then the memory will guarantee that those writes will be correctly ordered.
 
-<img src="causal_consistency.png">
+<img src="p4_l3_resources/causal_consistency.png">
 
 In this situation, a causal consistency model will enforce that a process must read X from m1 before reading Y from m2.
 
@@ -268,7 +286,7 @@ A synchronization point makes sure that all o the updates that have happened pri
 
 If P1 performs a synchronization operation after writing to m1, that doesn't guarantee that P2 will see that particular update at this moment. P2 hasn't explicitly synced with the rest of the system. The sync point has to be called by both processes.
 
-<img src="weak_consistency.png">
+<img src="p4_l3_resources/weak_consistency.png">
 
 Once a synchronization is performed on P2, P2 will see all of the previous updates that have happened to any memory location in the system. When P2 performs the sync, it is guaranteed to see the value of m1 at the time that P1 performed the sync.
 
