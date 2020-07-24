@@ -31,7 +31,7 @@ Finally, the need for communication and coordination illustrates the necessity o
 
 ## Message-based IPC
 
-<img width="400" src="p3_l3_resources/ipc_summary.png">
+<img width="400" src="p3_l3_resources/ipc_overview.png">
 
 In message-based IPC, **processes create messages and then send and receive them**. The OS is responsible for creating and maintaining the channel that is used to send these messages.
 
