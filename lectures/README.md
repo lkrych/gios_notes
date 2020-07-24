@@ -5,7 +5,7 @@
 * [Scheduling](p3_l1_scheduling.md)
 * [Memory Management](p3_l2_memory_management.md)
 * [IPC](p3_l3_ipc.md)
-* [Synchronization](p3_l4_synchronizaton.md)
+* [Synchronization](p3_l4_synchronization.md)
 * [I/O Management](p3_l5_resources_io_management.md)
 * [Virtualization](p3_l6_virtualization.md)
 * [RPC](p4_l1_rpc.md)
