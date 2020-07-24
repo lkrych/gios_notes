@@ -1,5 +1,7 @@
 # Synchronization Concepts
 
+![](https://media.giphy.com/media/eFWD7Zb3lVu8M/giphy.gif)
+
 ## Table of Contents
 
 * [Synchronization Constructs](#introduction)
