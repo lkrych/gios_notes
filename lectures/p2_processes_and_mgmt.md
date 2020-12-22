@@ -1,6 +1,20 @@
 # Processes and Process Management
 
 ## Table of Contents
+* [Introduction](#introduction)
+* [What is a process?](#what-is-a-process?)
+* [What does a process look like?](#what-does-a-process-look-like?)
+* [Address Space and Memory Management](#address-space-and-memory-management)
+* [Process Execution State](#process-execution-state)
+* [What is a Process Control Block(PCB)?](#what-is-a-process-control-block?)
+* [How is a PCB used?](#how-is-a-pcb-used?)
+* [Process Life Cycle: states](#process-life-cycle-states)
+* [Process Life Cycle: creation](#process-life-cycle-creation)
+* [Role of CPU scheduler](#role-of-cpu-scheduler)
+* [How long should a process run for?](#how-long-should-a-process-run-for?)
+* [What about I/O?](#what-about-io?)
+* [Interprocess Communication (IPC)](#interprocess-communication-ipc)
+
 
 ## Introduction
 
@@ -151,7 +165,7 @@ Here is an image that demonstrates how a process makes its way to the ready queu
 
 The scheduler has no control over how I/O operations are managed.
 
-## Inter Process Communication (IPC)
+## Interprocess Communication (IPC)
 
 An operating system provides mechanisms for processes to interact despite the fact that it goes to great pains to isolate processes.
 
